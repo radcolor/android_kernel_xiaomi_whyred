@@ -402,6 +402,7 @@ static void cursor_timer_handler(unsigned long dev_addr)
 	struct fbcon_ops *ops = info->fbcon_par;
 
 	queue_work(system_power_efficient_wq, &info->queue);
+
 	mod_timer(&ops->cursor_timer, jiffies + ops->cur_blink_jiffies);
 }
 
