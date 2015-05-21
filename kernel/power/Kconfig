@@ -328,3 +328,6 @@ config BOEFFLA_WL_BLOCKER
 		depends on PM
 		default N
 
+config DEDUCE_WAKEUP_REASONS
+	bool
+	default n
