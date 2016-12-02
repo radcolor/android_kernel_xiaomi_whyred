@@ -749,7 +749,14 @@ uint32_t core_set_dolby_manufacturer_id(int manufacturer_id)
 	int rc = 0;
 	pr_debug("%s: manufacturer_id :%d\n", __func__, manufacturer_id);
 	mutex_lock(&(q6core_lcl.cmd_lock));
+
 	ocm_core_open();
+        if (q6core_lcl.core_handle_q == NULL) {
+                pr_err("%s: apr registration for CORE failed\n", __func__);
+                rc  = -ENODEV;
+                goto fail_cmd;
+        }
+
 	if (q6core_lcl.core_handle_q) {
 		payload.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_EVENT,
 			APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
@@ -769,7 +776,10 @@ uint32_t core_set_dolby_manufacturer_id(int manufacturer_id)
 			pr_err("%s: SET_DOLBY_MANUFACTURER_ID failed op[0x%x]rc[%d]\n",
 				__func__, payload.hdr.opcode, rc);
 	}
+
+fail_cmd:
 	mutex_unlock(&(q6core_lcl.cmd_lock));
+
 	return rc;
 }
 
