@@ -595,6 +595,12 @@ config KERNEL_DRIVER_D2S_CN
 	  and the driver provides an API to check if this interrupt
 	  is available on the current PMIC chip.
 
+config FORCE_FAST_CHARGE
+	bool "Force faster charge rate for USB"
+	default y
+	help
+	  This drivers allows users to override default charge rate for USB.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
