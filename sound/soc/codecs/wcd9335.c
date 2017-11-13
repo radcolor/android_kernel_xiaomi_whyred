@@ -168,7 +168,7 @@ enum tasha_sido_voltage {
 
 static enum codec_variant codec_ver;
 
-static int dig_core_collapse_enable = 1;
+static int dig_core_collapse_enable = 0;
 module_param(dig_core_collapse_enable, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(dig_core_collapse_enable, "enable/disable power gating");
