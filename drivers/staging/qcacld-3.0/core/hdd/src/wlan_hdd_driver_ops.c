@@ -1444,7 +1444,6 @@ static void wlan_hdd_pld_uevent(struct device *dev,
 	mutex_lock(&hdd_init_deinit_lock);
 	switch (uevent->uevent) {
 	case PLD_RECOVERY:
-		cds_set_target_ready(false);
 		hdd_pld_ipa_uc_shutdown_pipes();
 		wlan_hdd_purge_notifier();
 		qdf_complete_wait_events();
