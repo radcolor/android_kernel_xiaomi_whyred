@@ -134,6 +134,25 @@ int init_iosched_switcher(struct request_queue *q)
 	return 0;
 }
 
+int remove_iosched_switcher(struct request_queue *q)
+{
+	struct req_queue_data *r;
+	int ret = 1;
+
+	spin_lock(&init_lock);
+	list_for_each_entry(r, &req_queues.list, list) {
+		if (r->queue == q) {
+			list_del(&r->list);
+			kfree(r);
+			ret = 0;
+			break;
+		}
+	}
+	spin_unlock(&init_lock);
+
+	return ret;
+}
+
 static int iosched_switcher_core_init(void)
 {
 	INIT_DELAYED_WORK(&restore_prev, restore_prev_fn);

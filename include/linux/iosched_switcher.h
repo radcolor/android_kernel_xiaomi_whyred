@@ -16,8 +16,14 @@
 
 #ifdef CONFIG_IOSCHED_SWITCHER
 int init_iosched_switcher(struct request_queue *q);
+int remove_iosched_switcher(struct request_queue *q);
 #else
 static inline int init_iosched_switcher(struct request_queue *q)
+{
+	return 0;
+}
+
+static inline int remove_iosched_switcher(struct request_queue *q)
 {
 	return 0;
 }
