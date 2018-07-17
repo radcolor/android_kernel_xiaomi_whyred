@@ -17,6 +17,10 @@
 #include <linux/blk_types.h>
 #include <linux/elevator.h>
 #include <linux/fb.h>
+#include <linux/module.h>
+
+static unsigned int __read_mostly enabled = 1;
+module_param(enabled, uint, 0664);
 
 #define NOOP_IOSCHED "noop"
 #define RESTORE_DELAY_MS (5000)
@@ -37,6 +41,9 @@ static struct req_queue_data req_queues = {
 
 static void change_elevator(struct req_queue_data *r, bool use_noop)
 {
+	if (!enabled)
+		return;
+
 	struct request_queue *q = r->queue;
 
 	if (r->using_noop == use_noop)
@@ -54,6 +61,9 @@ static void change_elevator(struct req_queue_data *r, bool use_noop)
 
 static void change_all_elevators(struct list_head *head, bool use_noop)
 {
+	if (!enabled)
+		return;
+
 	struct req_queue_data *r;
 
 	list_for_each_entry(r, head, list)
@@ -63,6 +73,9 @@ static void change_all_elevators(struct list_head *head, bool use_noop)
 static int fb_notifier_callback(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
+	if (!enabled)
+		return NOTIFY_OK;
+
 	struct fb_event *evdata = data;
 	int *blank = evdata->data;
 
