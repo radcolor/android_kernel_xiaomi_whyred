@@ -22,7 +22,9 @@
 static unsigned int __read_mostly enabled = 1;
 module_param(enabled, uint, 0664);
 
-#define NOOP_IOSCHED "noop"
+static char* __read_mostly scheduler = "noop";
+module_param(scheduler, charp, 0664);
+
 #define RESTORE_DELAY_MS (5000)
 
 struct req_queue_data {
@@ -50,7 +52,7 @@ static void change_elevator(struct req_queue_data *r, bool use_noop)
 
 	if (use_noop) {
 		strcpy(r->prev_e, q->elevator->type->elevator_name);
-		elevator_change(q, NOOP_IOSCHED);
+		elevator_change(q, scheduler);
 	} else {
 		elevator_change(q, r->prev_e);
 	}
