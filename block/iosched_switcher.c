@@ -41,9 +41,6 @@ static struct req_queue_data req_queues = {
 
 static void change_elevator(struct req_queue_data *r, bool use_noop)
 {
-	if (!enabled)
-		return;
-
 	struct request_queue *q = r->queue;
 
 	if (r->using_noop == use_noop)
@@ -61,9 +58,6 @@ static void change_elevator(struct req_queue_data *r, bool use_noop)
 
 static void change_all_elevators(struct list_head *head, bool use_noop)
 {
-	if (!enabled)
-		return;
-
 	struct req_queue_data *r;
 
 	list_for_each_entry(r, head, list)
