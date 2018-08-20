@@ -504,14 +504,14 @@ int ext4_readpage_inline(struct inode *inode, struct page *page)
 	}
 
 	if (trace_android_fs_dataread_start_enabled()) {
-		char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
+/*		char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
 
 		path = android_fstrace_get_pathname(pathbuf,
 						    MAX_TRACE_PATHBUF_LEN,
 						    inode);
 		trace_android_fs_dataread_start(inode, page_offset(page),
 						PAGE_SIZE, current->pid,
-						path, current->comm);
+						path, current->comm); */
 	}
 
 	/*
@@ -525,7 +525,7 @@ int ext4_readpage_inline(struct inode *inode, struct page *page)
 		SetPageUptodate(page);
 	}
 
-	trace_android_fs_dataread_end(inode, page_offset(page), PAGE_SIZE);
+//	trace_android_fs_dataread_end(inode, page_offset(page), PAGE_SIZE);
 
 	up_read(&EXT4_I(inode)->xattr_sem);
 
@@ -998,13 +998,13 @@ void ext4_show_inline_dir(struct inode *dir, struct buffer_head *bh,
 	struct ext4_dir_entry_2 *de = inline_start;
 	void *dlimit = inline_start + inline_size;
 
-	trace_printk("inode %lu\n", dir->i_ino);
+//	trace_printk("inode %lu\n", dir->i_ino);
 	offset = 0;
 	while ((void *)de < dlimit) {
 		de_len = ext4_rec_len_from_disk(de->rec_len, inline_size);
-		trace_printk("de: off %u rlen %u name %.*s nlen %u ino %u\n",
-			     offset, de_len, de->name_len, de->name,
-			     de->name_len, le32_to_cpu(de->inode));
+//		trace_printk("de: off %u rlen %u name %.*s nlen %u ino %u\n",
+//			     offset, de_len, de->name_len, de->name,
+//			     de->name_len, le32_to_cpu(de->inode));
 		if (ext4_check_dir_entry(dir, NULL, de, bh,
 					 inline_start, inline_size, offset))
 			BUG();

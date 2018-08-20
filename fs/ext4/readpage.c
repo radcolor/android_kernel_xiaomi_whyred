@@ -96,12 +96,12 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
 static void
 ext4_trace_read_completion(struct bio *bio)
 {
-	struct page *first_page = bio->bi_io_vec[0].bv_page;
+/*	struct page *first_page = bio->bi_io_vec[0].bv_page;
 
 	if (first_page != NULL)
 		trace_android_fs_dataread_end(first_page->mapping->host,
 					      page_offset(first_page),
-					      bio->bi_iter.bi_size);
+					      bio->bi_iter.bi_size); */
 }
 
 /*
@@ -155,7 +155,7 @@ static void
 ext4_submit_bio_read(struct bio *bio)
 {
 	if (trace_android_fs_dataread_start_enabled()) {
-		struct page *first_page = bio->bi_io_vec[0].bv_page;
+/*		struct page *first_page = bio->bi_io_vec[0].bv_page;
 
 		if (first_page != NULL) {
 			char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
@@ -170,7 +170,7 @@ ext4_submit_bio_read(struct bio *bio)
 				current->pid,
 				path,
 				current->comm);
-		}
+		} */
 	}
 	submit_bio(READ, bio);
 }
