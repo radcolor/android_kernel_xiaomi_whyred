@@ -1776,8 +1776,8 @@ static int send_notification(struct rq *rq, int check_pred, int check_groups)
 	if (!rq->cluster->notifier_sent) {
 		rq->cluster->notifier_sent = 1;
 		rc = 1;
-		trace_sched_freq_alert(cpu_of(rq), check_pred, check_groups, rq,
-				       new_load);
+//		trace_sched_freq_alert(cpu_of(rq), check_pred, check_groups, rq,
+//				       new_load);
 	}
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
@@ -1940,7 +1940,7 @@ static u32 get_pred_busy(struct rq *rq, struct task_struct *p,
 	u8 *buckets = p->ravg.busy_buckets;
 	u32 *hist = p->ravg.sum_history;
 	u32 dmin, dmax;
-	u64 cur_freq_runtime = 0;
+//	u64 cur_freq_runtime = 0;
 	int first = NUM_BUSY_BUCKETS, final;
 	u32 ret = runtime;
 
@@ -1991,9 +1991,9 @@ static u32 get_pred_busy(struct rq *rq, struct task_struct *p,
 	 */
 	ret = max(runtime, ret);
 out:
-	trace_sched_update_pred_demand(rq, p, runtime,
-		mult_frac((unsigned int)cur_freq_runtime, 100,
-			  sched_ravg_window), ret);
+//	trace_sched_update_pred_demand(rq, p, runtime,
+//		mult_frac((unsigned int)cur_freq_runtime, 100,
+//			  sched_ravg_window), ret);
 	return ret;
 }
 
@@ -2606,8 +2606,8 @@ update_task_rq_cpu_cycles(struct task_struct *p, struct rq *rq, int event,
 
 	p->cpu_cycles = cur_cycles;
 
-	trace_sched_get_task_cpu_cycles(cpu, event, rq->cc.cycles,
-					rq->cc.time, p);
+//	trace_sched_get_task_cpu_cycles(cpu, event, rq->cc.cycles,
+//					rq->cc.time, p);
 }
 
 static int
@@ -2708,7 +2708,8 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	p->ravg.pred_demand = pred_demand;
 
 done:
-	trace_sched_update_history(rq, p, runtime, samples, event);
+//	trace_sched_update_history(rq, p, runtime, samples, event);
+	return;
 }
 
 static u64 add_to_task_demand(struct rq *rq, struct task_struct *p, u64 delta)
@@ -2879,9 +2880,9 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 	if (exiting_task(p))
 		goto done;
 
-	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime,
-				     rq->cc.cycles, rq->cc.time,
-				     p->grp ? &rq->grp_time : NULL);
+//	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime,
+//				     rq->cc.cycles, rq->cc.time,
+//				     p->grp ? &rq->grp_time : NULL);
 
 done:
 	p->ravg.mark_start = wallclock;
@@ -3037,7 +3038,7 @@ void reset_all_window_stats(u64 window_start, unsigned int window_size)
 {
 	int cpu, i;
 	unsigned long flags;
-	u64 start_ts = sched_ktime_clock();
+//	u64 start_ts = sched_ktime_clock();
 	int reason = WINDOW_CHANGE;
 	unsigned int old = 0, new = 0;
 
@@ -3111,8 +3112,8 @@ void reset_all_window_stats(u64 window_start, unsigned int window_size)
 
 	local_irq_restore(flags);
 
-	trace_sched_reset_all_window_stats(window_start, window_size,
-		sched_ktime_clock() - start_ts, reason, old, new);
+//	trace_sched_reset_all_window_stats(window_start, window_size,
+//		sched_ktime_clock() - start_ts, reason, old, new);
 }
 
 /*
@@ -3325,12 +3326,12 @@ skip_early:
 		busy[i].predicted_load = div64_u64(pload[i], NSEC_PER_USEC);
 
 exit_early:
-		trace_sched_get_busy(cpu, busy[i].prev_load,
-				     busy[i].new_task_load,
-				     busy[i].predicted_load,
-				     early_detection[i],
-				     aggregate_load &&
-				      cpu == max_busy_cpu);
+///		trace_sched_get_busy(cpu, busy[i].prev_load,
+//				     busy[i].new_task_load,
+//				     busy[i].predicted_load,
+//				     early_detection[i],
+//				     aggregate_load &&
+//				      cpu == max_busy_cpu);
 		i++;
 	}
 }
@@ -3745,7 +3746,7 @@ static void _set_preferred_cluster(struct related_thread_group *grp)
 	grp->preferred_cluster = best_cluster(grp,
 			combined_demand, group_boost);
 	grp->last_update = sched_ktime_clock();
-	trace_sched_set_preferred_cluster(grp, combined_demand);
+//	trace_sched_set_preferred_cluster(grp, combined_demand);
 }
 
 void set_preferred_cluster(struct related_thread_group *grp)
@@ -3865,7 +3866,7 @@ static void transfer_busy_time(struct rq *rq, struct related_thread_group *grp,
 	p->ravg.curr_window_cpu[cpu] = p->ravg.curr_window;
 	p->ravg.prev_window_cpu[cpu] = p->ravg.prev_window;
 
-	trace_sched_migration_update_sum(p, migrate_type, rq);
+//	trace_sched_migration_update_sum(p, migrate_type, rq);
 
 	BUG_ON((s64)*src_curr_runnable_sum < 0);
 	BUG_ON((s64)*src_prev_runnable_sum < 0);

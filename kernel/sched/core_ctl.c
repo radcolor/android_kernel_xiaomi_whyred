@@ -609,8 +609,8 @@ static bool eval_need(struct cluster_data *cluster)
 		cluster->need_ts = now;
 		cluster->need_cpus = new_need;
 	}
-	trace_core_ctl_eval_need(cluster->first_cpu, last_need, new_need,
-				 ret && need_flag);
+//	trace_core_ctl_eval_need(cluster->first_cpu, last_need, new_need,
+//				 ret && need_flag);
 	spin_unlock_irqrestore(&state_lock, flags);
 
 	return ret && need_flag;
@@ -626,7 +626,7 @@ static int core_ctl_set_busy(unsigned int cpu, unsigned int busy)
 {
 	struct cpu_data *c = &per_cpu(cpu_state, cpu);
 	struct cluster_data *cluster = c->cluster;
-	unsigned int old_is_busy = c->is_busy;
+//	unsigned int old_is_busy = c->is_busy;
 
 	if (!cluster || !cluster->inited)
 		return 0;
@@ -638,7 +638,7 @@ static int core_ctl_set_busy(unsigned int cpu, unsigned int busy)
 	cluster->nrrun_changed = false;
 
 	apply_need(cluster);
-	trace_core_ctl_set_busy(cpu, busy, old_is_busy, c->is_busy);
+//	trace_core_ctl_set_busy(cpu, busy, old_is_busy, c->is_busy);
 	return 0;
 }
 
@@ -706,7 +706,7 @@ int core_ctl_set_boost(bool boost)
 	if (boost_state_changed)
 		apply_need(cluster);
 
-	trace_core_ctl_set_boost(cluster->boost, ret);
+//	trace_core_ctl_set_boost(cluster->boost, ret);
 
 	return ret;
 }
