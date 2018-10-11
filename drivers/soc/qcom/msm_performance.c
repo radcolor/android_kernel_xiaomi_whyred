@@ -247,8 +247,8 @@ static int set_max_cpus(const char *buf, const struct kernel_param *kp)
 
 		cp = strnchr(cp, strlen(cp), ':');
 		cp++;
-		trace_set_max_cpus(cpumask_bits(managed_clusters[i]->cpus)[0],
-								val);
+//		trace_set_max_cpus(cpumask_bits(managed_clusters[i]->cpus)[0],
+//								val);
 	}
 
 	schedule_delayed_work(&evaluate_hotplug_work, 0);
@@ -1782,8 +1782,8 @@ static void check_cluster_iowait(struct cluster *cl, u64 now)
 	}
 
 	cl->last_io_check_ts = now;
-	trace_track_iowait(cpumask_first(cl->cpus), cl->iowait_enter_cycle_cnt,
-			cl->iowait_exit_cycle_cnt, cl->cur_io_busy, max_iowait);
+//	trace_track_iowait(cpumask_first(cl->cpus), cl->iowait_enter_cycle_cnt,
+//			cl->iowait_exit_cycle_cnt, cl->cur_io_busy, max_iowait);
 
 	if (temp_iobusy != cl->cur_io_busy) {
 		cl->io_change = true;
@@ -1802,12 +1802,12 @@ static void disable_timer(struct cluster *cl)
 	spin_lock_irqsave(&cl->timer_lock, flags);
 
 	if (del_timer(&cl->mode_exit_timer)) {
-		trace_single_cycle_exit_timer_stop(cpumask_first(cl->cpus),
-			cl->single_enter_cycles, cl->single_enter_cycle_cnt,
-			cl->single_exit_cycles, cl->single_exit_cycle_cnt,
-			cl->multi_enter_cycles, cl->multi_enter_cycle_cnt,
-			cl->multi_exit_cycles, cl->multi_exit_cycle_cnt,
-			cl->timer_rate, cl->mode);
+//		trace_single_cycle_exit_timer_stop(cpumask_first(cl->cpus),
+//			cl->single_enter_cycles, cl->single_enter_cycle_cnt,
+//			cl->single_exit_cycles, cl->single_exit_cycle_cnt,
+//			cl->multi_enter_cycles, cl->multi_enter_cycle_cnt,
+//			cl->multi_exit_cycles, cl->multi_exit_cycle_cnt,
+//			cl->timer_rate, cl->mode);
 	}
 
 	spin_unlock_irqrestore(&cl->timer_lock, flags);
@@ -1824,12 +1824,12 @@ static void start_timer(struct cluster *cl)
 		usecs_to_jiffies(cl->single_exit_cycles * cl->timer_rate);
 		cl->mode_exit_timer.data = cpumask_first(cl->cpus);
 		add_timer(&cl->mode_exit_timer);
-		trace_single_cycle_exit_timer_start(cpumask_first(cl->cpus),
-			cl->single_enter_cycles, cl->single_enter_cycle_cnt,
-			cl->single_exit_cycles, cl->single_exit_cycle_cnt,
-			cl->multi_enter_cycles, cl->multi_enter_cycle_cnt,
-			cl->multi_exit_cycles, cl->multi_exit_cycle_cnt,
-			cl->timer_rate, cl->mode);
+//		trace_single_cycle_exit_timer_start(cpumask_first(cl->cpus),
+//			cl->single_enter_cycles, cl->single_enter_cycle_cnt,
+//			cl->single_exit_cycles, cl->single_exit_cycle_cnt,
+//			cl->multi_enter_cycles, cl->multi_enter_cycle_cnt,
+//			cl->multi_exit_cycles, cl->multi_exit_cycle_cnt,
+//			cl->timer_rate, cl->mode);
 	}
 	spin_unlock_irqrestore(&cl->timer_lock, flags);
 }
@@ -1839,12 +1839,12 @@ static void disable_perf_cl_peak_timer(struct cluster *cl)
 {
 
 	if (del_timer(&cl->perf_cl_peak_mode_exit_timer)) {
-		trace_perf_cl_peak_exit_timer_stop(cpumask_first(cl->cpus),
-			cl->perf_cl_peak_enter_cycles,
-			cl->perf_cl_peak_enter_cycle_cnt,
-			cl->perf_cl_peak_exit_cycles,
-			cl->perf_cl_peak_exit_cycle_cnt,
-			cl->timer_rate, cl->mode);
+//		trace_perf_cl_peak_exit_timer_stop(cpumask_first(cl->cpus),
+//			cl->perf_cl_peak_enter_cycles,
+//			cl->perf_cl_peak_enter_cycle_cnt,
+//			cl->perf_cl_peak_exit_cycles,
+//			cl->perf_cl_peak_exit_cycle_cnt,
+//			cl->timer_rate, cl->mode);
 	}
 
 }
@@ -1858,12 +1858,12 @@ static void start_perf_cl_peak_timer(struct cluster *cl)
 		usecs_to_jiffies(cl->perf_cl_peak_exit_cycles * cl->timer_rate);
 		cl->perf_cl_peak_mode_exit_timer.data = cpumask_first(cl->cpus);
 		add_timer(&cl->perf_cl_peak_mode_exit_timer);
-		trace_perf_cl_peak_exit_timer_start(cpumask_first(cl->cpus),
-			cl->perf_cl_peak_enter_cycles,
-			cl->perf_cl_peak_enter_cycle_cnt,
-			cl->perf_cl_peak_exit_cycles,
-			cl->perf_cl_peak_exit_cycle_cnt,
-			cl->timer_rate, cl->mode);
+//		trace_perf_cl_peak_exit_timer_start(cpumask_first(cl->cpus),
+//			cl->perf_cl_peak_enter_cycles,
+//			cl->perf_cl_peak_enter_cycle_cnt,
+//			cl->perf_cl_peak_exit_cycles,
+//			cl->perf_cl_peak_exit_cycle_cnt,
+//			cl->timer_rate, cl->mode);
 	}
 }
 
@@ -2070,11 +2070,11 @@ static void check_perf_cl_peak_load(struct cluster *cl, u64 now)
 		cl->perf_cl_detect_state_change = true;
 	}
 
-	trace_cpu_mode_detect(cpumask_first(cl->cpus), max_load,
-		cl->single_enter_cycle_cnt, cl->single_exit_cycle_cnt,
-		total_load, cl->multi_enter_cycle_cnt,
-		cl->multi_exit_cycle_cnt, cl->perf_cl_peak_enter_cycle_cnt,
-		cl->perf_cl_peak_exit_cycle_cnt, cl->mode, cpu_cnt);
+//	trace_cpu_mode_detect(cpumask_first(cl->cpus), max_load,
+//		cl->single_enter_cycle_cnt, cl->single_exit_cycle_cnt,
+//		total_load, cl->multi_enter_cycle_cnt,
+//		cl->multi_exit_cycle_cnt, cl->perf_cl_peak_enter_cycle_cnt,
+//		cl->perf_cl_peak_exit_cycle_cnt, cl->mode, cpu_cnt);
 
 	spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
 
@@ -2178,11 +2178,11 @@ static void check_cpu_load(struct cluster *cl, u64 now)
 		pr_debug("msm_perf: Mode changed to %u\n", ret_mode);
 	}
 
-	trace_cpu_mode_detect(cpumask_first(cl->cpus), max_load,
-		cl->single_enter_cycle_cnt, cl->single_exit_cycle_cnt,
-		total_load, cl->multi_enter_cycle_cnt,
-		cl->multi_exit_cycle_cnt, cl->perf_cl_peak_enter_cycle_cnt,
-		cl->perf_cl_peak_exit_cycle_cnt, cl->mode, cpu_cnt);
+//	trace_cpu_mode_detect(cpumask_first(cl->cpus), max_load,
+//		cl->single_enter_cycle_cnt, cl->single_exit_cycle_cnt,
+//		total_load, cl->multi_enter_cycle_cnt,
+//		cl->multi_exit_cycle_cnt, cl->perf_cl_peak_enter_cycle_cnt,
+//		cl->perf_cl_peak_exit_cycle_cnt, cl->mode, cpu_cnt);
 
 	spin_unlock_irqrestore(&cl->mode_lock, flags);
 
@@ -2537,8 +2537,8 @@ static int __ref msm_performance_cpu_callback(struct notifier_block *nfb,
 		 * work is delayed to account for CPU hotplug latencies
 		 */
 		if (schedule_delayed_work(&evaluate_hotplug_work, 0)) {
-			trace_reevaluate_hotplug(cpumask_bits(i_cl->cpus)[0],
-							i_cl->max_cpu_request);
+//			trace_reevaluate_hotplug(cpumask_bits(i_cl->cpus)[0],
+//							i_cl->max_cpu_request);
 			pr_debug("msm_perf: Re-evaluation scheduled %d\n", cpu);
 		} else {
 			pr_debug("msm_perf: Work scheduling failed %d\n", cpu);
@@ -2578,12 +2578,12 @@ static void single_mod_exit_timer(unsigned long data)
 		i_cl->mode = i_cl->mode & ~SINGLE;
 		i_cl->single_enter_cycle_cnt = 0;
 		i_cl->single_exit_cycle_cnt = 0;
-		trace_single_mode_timeout(cpumask_first(i_cl->cpus),
-			i_cl->single_enter_cycles, i_cl->single_enter_cycle_cnt,
-			i_cl->single_exit_cycles, i_cl->single_exit_cycle_cnt,
-			i_cl->multi_enter_cycles, i_cl->multi_enter_cycle_cnt,
-			i_cl->multi_exit_cycles, i_cl->multi_exit_cycle_cnt,
-			i_cl->timer_rate, i_cl->mode);
+//		trace_single_mode_timeout(cpumask_first(i_cl->cpus),
+//			i_cl->single_enter_cycles, i_cl->single_enter_cycle_cnt,
+//			i_cl->single_exit_cycles, i_cl->single_exit_cycle_cnt,
+//			i_cl->multi_enter_cycles, i_cl->multi_enter_cycle_cnt,
+//			i_cl->multi_exit_cycles, i_cl->multi_exit_cycle_cnt,
+//			i_cl->timer_rate, i_cl->mode);
 	}
 	spin_unlock_irqrestore(&i_cl->mode_lock, flags);
 	wake_up_process(notify_thread);
