@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#include "sdm660_e7s.dtsi"
-#include "sdm636-touchpad-e7s.dsi"
+#include "sdm660_e7t.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM 636";
@@ -33,7 +32,6 @@
 &soc {
 	/delete-node/ qcom,turing@1a300000;
 
-	/delete-node/ qcom,msm-cdsp-loader;
 	/delete-node/ cti@7068000;
 	/delete-node/ turing_etm0;
 	funnel@6042000 {
@@ -74,6 +72,7 @@
 		/delete-node/ qcom,msm_fastrpc_compute_cb13;
 	};
 };
+
 /* GPU overrides */
 &msm_gpu {
 		/* Update GPU chip ID*/
