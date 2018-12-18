@@ -31,7 +31,7 @@
 
 static inline const char *mdss_mdp_pipetype2str(u32 ptype)
 {
-	static const char const *strings[] = {
+	static const char *strings[] = {
 #define PIPE_TYPE(t) [MDSS_MDP_PIPE_TYPE_ ## t] = __stringify(t)
 		PIPE_TYPE(VIG),
 		PIPE_TYPE(RGB),
