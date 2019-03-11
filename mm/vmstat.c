@@ -749,6 +749,7 @@ const char * const vmstat_text[] = {
 	"nr_shmem",
 	"nr_dirtied",
 	"nr_written",
+	"nr_gpu_heap",
 	"nr_pages_scanned",
 #if IS_ENABLED(CONFIG_ZSMALLOC)
 	"nr_zspages",
