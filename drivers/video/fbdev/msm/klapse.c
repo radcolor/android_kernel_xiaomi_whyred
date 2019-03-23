@@ -22,20 +22,20 @@
 #define SCALE_VAL_MIN   20
 
 // MAX_BRIGHTNESS : Maximum value of the display brightness/backlight
-#define MAX_BRIGHTNESS  1023
+#define MAX_BRIGHTNESS  4095
 
 // MIN_BRIGHTNESS : Minimum value of the display brightness/backlight
-#define MIN_BRIGHTNESS  2
+#define MIN_BRIGHTNESS  1
 
-/* UPPER_BL_LVL : Initial upper limit for brightness-dependent mode. 
+/* UPPER_BL_LVL : Initial upper limit for brightness-dependent mode.
  * Value <= MAX_BRIGHTNESS && > LOWER_BL_LVL (MUST)
  */
-#define UPPER_BL_LVL  200
+#define UPPER_BL_LVL  2829
 
-/* LOWER_BL_LVL : Initial lower limit for brightness-dependent mode. 
+/* LOWER_BL_LVL : Initial lower limit for brightness-dependent mode.
  * Value < UPPER_BL_LVL (MUST)
  */
-#define LOWER_BL_LVL 2
+#define LOWER_BL_LVL 1
 
 #define LIC "GPLv2"
 #define AUT "tanish2k09"
