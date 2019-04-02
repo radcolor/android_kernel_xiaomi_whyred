@@ -461,6 +461,11 @@ static int msm_lmh_dcvs_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+        if (!IS_ENABLED(CONFIG_QCOM_THERMAL_LIMITS_DCVS)) {
+                devm_kfree(&pdev->dev, hw);
+                return 0;
+        }
+
 	hw->default_lo.temp = MSM_LIMITS_ARM_THRESHOLD_VAL;
 	hw->default_lo.trip = THERMAL_TRIP_CONFIGURABLE_LOW;
 	hw->default_lo.notify = trip_notify;
