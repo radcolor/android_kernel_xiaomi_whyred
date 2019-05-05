@@ -23,6 +23,7 @@
 #include <linux/irqreturn.h>
 #include <linux/kref.h>
 #include <linux/kthread.h>
+#include <linux/pm_qos.h>
 
 #include "mdss.h"
 #include "mdss_mdp_hwio.h"
@@ -998,6 +999,8 @@ struct mdss_overlay_private {
 	u8 secure_transition_state;
 
 	bool cache_null_commit; /* Cache if preceding commit was NULL */
+
+	struct pm_qos_request pm_qos_req;
 };
 
 struct mdss_mdp_set_ot_params {
