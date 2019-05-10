@@ -9,5 +9,3 @@ obj-y += msm_bus_fabric_adhoc.o msm_bus_arb_adhoc.o msm_bus_rules.o \
 obj-$(CONFIG_OF) += msm_bus_of_adhoc.o
 obj-$(CONFIG_DEBUG_BUS_VOTER) += msm_bus_dbg_voter.o
 obj-$(CONFIG_CORESIGHT) +=  msm_buspm_coresight_adhoc.o
-
-obj-$(CONFIG_DEBUG_FS) += msm_bus_dbg.o
