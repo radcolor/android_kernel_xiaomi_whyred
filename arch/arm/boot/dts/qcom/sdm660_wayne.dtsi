@@ -413,9 +413,14 @@
 		};
 
 		cont_splash_mem: splash_region@9d400000 {
-			reg = <0x0 0x9d400000 0x0 0x02400000>;
+			reg = <0x0 0x9d400000 0x0 0x23ff000>;
 			label = "cont_splash_mem";
 		};
+
+                dfps_data_mem: dfps_data_mem@0x9f7ff000 {
+                       reg = <0 0x9f7ff000 0 0x00001000>;
+                       label = "dfps_data_mem";
+                };
 
 		pstore_reserve_mem: pstore_reserve_mem_region@0 {
 			linux,reserve-contiguous-region;
@@ -660,7 +665,7 @@
 			compatible = "qcom,memshare-peripheral";
 			qcom,peripheral-size = <0x0>;
 			qcom,client-id = <1>;
-			qcom,allocate-boot-time;
+			qcom,allocate-on-request;
 			label = "modem";
 		};
 	};
@@ -1750,6 +1755,7 @@
 		qcom,irq-mask = <0x200>;
 		interrupts = <0 157 1>;
 		label = "lpass";
+		cpu-affinity = <1 2>;
 		qcom,qos-config = <&glink_qos_adsp>;
 		qcom,ramp-time = <0xaf>;
 	};
