@@ -44,10 +44,8 @@
 #include "synaptics_dsx_core.h"
 
 #define SYN_I2C_RETRY_TIMES 10
+#define rd_msgs  1
 
-/*
-#define I2C_BURST_LIMIT 255
-*/
 /*
 #define XFER_MSGS_LIMIT 8
 */
@@ -334,12 +332,6 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 	int retval;
 	unsigned char retry;
 	unsigned char buf;
-#ifdef I2C_BURST_LIMIT
-	unsigned int ii;
-	unsigned int rd_msgs = ((length - 1) / I2C_BURST_LIMIT) + 1;
-#else
-	unsigned int rd_msgs = 1;
-#endif
 	unsigned char index = 0;
 	unsigned char xfer_msgs;
 	unsigned char remaining_msgs;
@@ -362,18 +354,6 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 	msg[0].flags = 0;
 	msg[0].len = 1;
 	msg[0].buf = &buf;
-
-#ifdef I2C_BURST_LIMIT
-	for (ii = 0; ii < (rd_msgs - 1); ii++) {
-		msg[ii + 1].addr = hw_if.board_data->i2c_addr;
-		msg[ii + 1].flags = I2C_M_RD;
-		msg[ii + 1].len = I2C_BURST_LIMIT;
-		msg[ii + 1].buf = &data[data_offset];
-		data_offset += I2C_BURST_LIMIT;
-		remaining_length -= I2C_BURST_LIMIT;
-	}
-#endif
-
 	msg[rd_msgs].addr = hw_if.board_data->i2c_addr;
 	msg[rd_msgs].flags = I2C_M_RD;
 	msg[rd_msgs].len = (unsigned short)remaining_length;
@@ -406,10 +386,6 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 				synaptics_rmi4_i2c_check_addr(rmi4_data, i2c);
 				i2c_addr = hw_if.board_data->i2c_addr;
 				msg[0].addr = i2c_addr;
-#ifdef I2C_BURST_LIMIT
-				for (ii = 0; ii < (rd_msgs - 1); ii++)
-					msg[ii + 1].addr = i2c_addr;
-#endif
 				msg[rd_msgs].addr = i2c_addr;
 			}
 		}
