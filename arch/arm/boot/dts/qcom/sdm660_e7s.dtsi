@@ -916,10 +916,10 @@
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <1>;
 		qcom,poll-ms = <100>;
-		qcom,therm-reset-temp = <115>;
-		qcom,core-limit-temp = <70>;
+		qcom,therm-reset-temp = <90>;
+		qcom,core-limit-temp = <60>;
 		qcom,core-temp-hysteresis = <10>;
-		qcom,hotplug-temp = <105>;
+		qcom,hotplug-temp = <80>;
 		qcom,hotplug-temp-hysteresis = <20>;
 		qcom,online-hotplug-core;
 		qcom,synchronous-cluster-id = <0 1>;
