@@ -906,7 +906,7 @@ static struct sde_rot_hw_resource *sde_rotator_get_hw_resource(
 	BUG_ON(atomic_read(&hw->num_active) > hw->max_active);
 	while (!sde_rotator_is_hw_available(mgr, hw, entry)) {
 		sde_rot_mgr_unlock(mgr);
-		ret = wait_event_timeout(hw->wait_queue,
+		ret = wait_event_interruptible_timeout(hw->wait_queue,
 			sde_rotator_is_hw_available(mgr, hw, entry),
 			msecs_to_jiffies(mgr->hwacquire_timeout));
 		sde_rot_mgr_lock(mgr);
