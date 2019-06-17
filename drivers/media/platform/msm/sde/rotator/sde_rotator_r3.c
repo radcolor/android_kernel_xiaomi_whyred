@@ -1105,7 +1105,7 @@ static u32 sde_hw_rotator_wait_done_regdma(
 	if (rot->irq_num >= 0) {
 		SDEROT_DBG("Wait for REGDMA completion, ctx:%p, ts:%X\n",
 				ctx, ctx->timestamp);
-		rc = wait_event_timeout(ctx->regdma_waitq,
+		rc = wait_event_interruptible_timeout(ctx->regdma_waitq,
 				!sde_hw_rotator_pending_swts(rot, ctx, &swts),
 				KOFF_TIMEOUT);
 
