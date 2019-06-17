@@ -1197,7 +1197,7 @@ static int mdss_mdp_cmd_wait4readptr(struct mdss_mdp_cmd_ctx *ctx)
 {
 	int rc = 0;
 
-	rc = wait_event_timeout(ctx->rdptr_waitq,
+	rc = wait_event_interruptible_timeout(ctx->rdptr_waitq,
 			atomic_read(&ctx->rdptr_cnt) == 0,
 			KOFF_TIMEOUT);
 	if (rc <= 0) {
@@ -2070,7 +2070,7 @@ static int __mdss_mdp_wait4pingpong(struct mdss_mdp_cmd_ctx *ctx)
 	s64 time;
 
 	do {
-		rc = wait_event_timeout(ctx->pp_waitq,
+		rc = wait_event_interruptible_timeout(ctx->pp_waitq,
 				atomic_read(&ctx->koff_cnt) == 0,
 				KOFF_TIMEOUT);
 		time = ktime_to_ms(ktime_get());

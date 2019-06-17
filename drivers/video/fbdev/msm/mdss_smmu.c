@@ -72,7 +72,7 @@ static int mdss_smmu_secure_wait(int State, int request)
 	  * Case1: MDP in Secure Display and Rotator in Non Secure
 	  */
 	if (!State && !request && mdss_get_sd_client_cnt()) {
-		rc = wait_event_timeout(mdata->secure_waitq,
+		rc = wait_event_interruptible_timeout(mdata->secure_waitq,
 				(mdss_get_sd_client_cnt() == 0),
 				KOFF_TIMEOUT);
 		if (rc <= 0) {
