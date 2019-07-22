@@ -21,6 +21,7 @@
 #include <linux/posix_acl_xattr.h>
 #include "f2fs.h"
 #include "xattr.h"
+#include "segment.h"
 
 static struct kmem_cache *f2fs_xattr_cachep;
 
@@ -810,6 +811,10 @@ int f2fs_setxattr(struct inode *inode, int index, const char *name,
 {
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	int err;
+
+	err = f2fs_is_checkpoint_ready(sbi);
+	if (err)
+		return err;
 
 	err = dquot_initialize(inode);
 	if (err)
