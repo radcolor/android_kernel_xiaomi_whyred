@@ -1,4 +1,5 @@
-/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,15 +14,15 @@
 
 /dts-v1/;
 
-#include "sdm660.dtsi"
-#include "sdm660-mtp.dtsi"
+#include "sdm636_e7s.dtsi"
+#include "sdm636-mtp_e7s.dtsi"
 //#include "sdm660-external-codec.dtsi"
 #include "sdm660-internal-codec.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. SDM 660 PM660 + PM660L MTP";
-	compatible = "qcom,sdm660-mtp", "qcom,sdm660", "qcom,mtp";
-	qcom,board-id = <8 0>;
+	model = "Qualcomm Technologies, Inc. SDM 636 PM660 + PM660L E7S";
+	compatible = "qcom,sdm636-mtp", "qcom,sdm636", "qcom,mtp";
+	qcom,board-id = <0x30008 0>;
 	qcom,pmic-id = <0x0001001b 0x0101011a 0x0 0x0>,
 			<0x0001001b 0x0201011a 0x0 0x0>,
 			<0x0001001b 0x0102001a 0x0 0x0>;
@@ -30,64 +31,30 @@
 &tavil_snd {
 	qcom,msm-mbhc-moist-cfg = <0>, <0>, <3>;
 };
-
-&int_codec {
-
-	qcom,msm-mbhc-usbc-audio-supported = <1>;
-	qcom,usbc-analog-en1_gpio = <&wcd_usbc_analog_en1_gpio>;
-	qcom,usbc-analog-en2_n_gpio = <&wcd_usbc_analog_en2n_gpio>;
-};
-
-&pm660l_l3 {
-        regulator-always-on;
-};
 &tlmm {
 	hall_int_active:hall_int_active {
 		mux {
-		          pins = "gpio76";
+		          pins = "gpio75";
 		          function = "gpio";
 		};
 		config{
-		          pins = "gpio76";
+		          pins = "gpio75";
 	                  drive-strength = <6>;
 	                  bias-pull-up;
 	            };
         };
 	hall_int_suspend: hall_int_suspend {
 		mux {
-		          pins = "gpio76";
+		          pins = "gpio75";
 		          function = "gpio";
 		};
 		config{
-		          pins = "gpio76";
+		          pins = "gpio75";
 		          drive-strength = <6>;
 		          bias-pull-up;
 		};
         };
 };
-
-&pm660_gpios {
-	 /* GPIO 12 voice wake clock */
-	 gpio@cb00 {
-		qcom,mode = <1>; /* Output */
-		qcom,pull = <5>; /* No Pull */
-		qcom,vin-sel = <0>; /* VIN0 GPIO_LV */
-		qcom,src-sel = <2>; /* Special Function 1 */
-		qcom,invert = <0>; /* Invert */
-		qcom,master-en = <1>; /* Enable GPIO */
-	        status = "ok";
-	};
-};
-
-&spi_8{
-	status = "ok";
-	
-	/*	
-	pinctrl-names = "spi_active", "spi_sleep";
-	pinctrl-0 = <&spi_3_active>;
-	pinctrl-1 = <&spi_3_sleep>;*/
-};
-
 &soc {
 	hall_switch {
 
@@ -99,7 +66,6 @@
 	    //interrupts = <0 107 3>;
 	    vdd-io-supply= <&pm660_l8>;
 	    interrupt-names = "hall_irq";
-	    hall,irq-gpio = <&tlmm 76 0x0>;
+	    hall,irq-gpio = <&tlmm 75 0x0>;
 	};
 };
-

@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -171,7 +172,6 @@
 		pm660_coincell: qcom,coincell@2800 {
 			compatible = "qcom,qpnp-coincell";
 			reg = <0x2800 0x100>;
-			qcom,charge-enable = <0>;
 		};
 
 		pm660_rtc: qcom,pm660_rtc {
@@ -345,6 +345,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
+			qcom,micro-usb;
 			qcom,pmic-revid = <&pm660_revid>;
 
 			io-channels = <&pm660_rradc 8>,
@@ -358,15 +359,17 @@
 
 			qcom,wipower-max-uw = <5000000>;
 			dpdm-supply = <&qusb_phy0>;
-			qcom,usb-icl-ua = <2900000>;
-			qcom,otg-cl-ua = <1500000>;
-			qcom,dc-icl-ua = <2900000>;
-			qcom,fcc-max-ua = <2900000>;
+			qcom,usb-icl-ua = <2000000>;
+			qcom,dc-icl-ua = <2000000>;
+			qcom,fcc-max-ua = <2500000>;
 			qcom,fv-max-uv  = <4400000>;
 			qcom,sw-jeita-enable;
 
+
 			qcom,thermal-mitigation
-					= <2900000 2000000 1800000 1500000 1000000 500000 100000>;
+					= <2500000 2300000 2000000 1500000 1000000 400000 200000>;
+			qcom,thermal-mitigation-china
+					= <2500000 2300000 2000000 1500000 1000000 400000 200000>;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
@@ -482,6 +485,7 @@
 
 		pm660_pdphy: qcom,usb-pdphy@1700 {
 			compatible = "qcom,qpnp-pdphy";
+			status = "disabled";
 			reg = <0x1700 0x100>;
 			vdd-pdphy-supply = <&pm660l_l7>;
 			vbus-supply = <&smb2_vbus>;
@@ -585,7 +589,7 @@
 			qcom,fg-cutoff-voltage = <3400>;
 			qcom,fg-chg-term-current = <200>;
 			qcom,fg-sys-term-current = <300>;
-			qcom,fg-recharge-voltage = <4340>;
+			qcom,fg-recharge-voltage = <4320>;
 			qcom,fg-esr-timer-awake = <96 96>;
 			qcom,fg-esr-timer-asleep = <256 256>;
 			qcom,fg-esr-timer-charging = <0 96>;
@@ -675,25 +679,20 @@
 			qcom,pmic-revid = <&pm660_revid>;
 			qcom,pmic-misc = <&pm660_misc>;
 			qcom,misc-clk-trim-error-reg = <0xf3>;
-			qcom,actuator-type = "lra";
-			qcom,play-mode = "buffer";
-			qcom,vmax-mv = <2204>;
+			qcom,actuator-type = "erm";
+			qcom,play-mode = "direct";
+			qcom,vmax-mv = <3000>;
 			qcom,ilim-ma = <800>;
-			qcom,wave-shape = "sine";
-			qcom,wave-play-rate-us = <4878>;
-			qcom,int-pwm-freq-khz = <253>;
+			qcom,wave-shape = "square";
+			qcom,wave-play-rate-us = <6667>;
+			qcom,int-pwm-freq-khz = <505>;
 			qcom,sc-deb-cycles = <8>;
 			qcom,en-brake;
-			qcom,brake-pattern = [02 02 01 00];
-			qcom,wave-samples = [3e 3e 3e 00 00 00 00 00];
-			qcom,wave-samples-two = [3e 3e 3e 3e 00 00 00 00];
-			qcom,wave-samples-three = [3e 3e 3e 3e 3e 00 00 00];
-			qcom,wave-rep-cnt = <1>;
-			qcom,wave-samp-rep-cnt = <1>;
-			qcom,lra-high-z = "opt1";
-			qcom,lra-auto-res-mode = "none";
+			qcom,brake-pattern = [03 03 00 00];
+			qcom,lra-high-z = "opt0";
+			qcom,lra-auto-res-mode = "qwd";
 			qcom,lra-calibrate-at-eop = <0>;
-			qcom,lra-hw-auto-resonance;
+			qcom,correct-lra-drive-freq;
 		};
 	};
 };
