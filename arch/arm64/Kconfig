@@ -218,6 +218,12 @@ config ARM64_DMA_USE_IOMMU
 	select ARM_HAS_SG_CHAIN
 	select NEED_SG_DMA_LENGTH
 
+config KERNEL_CUSTOM_E7S
+    default n
+        bool "Custom for hardware E7S_pcb"
+	    help
+	            Custom for E7S_pcb.
+				
 if ARM64_DMA_USE_IOMMU
 
 config ARM64_DMA_IOMMU_ALIGNMENT
