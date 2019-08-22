@@ -18,6 +18,8 @@
 #include "msm_cci.h"
 #include "msm_camera_dt_util.h"
 
+#include <soc/qcom/camera2.h>
+extern struct vendor_eeprom s_vendor_eeprom[CAMERA_VENDOR_EEPROM_COUNT_MAX];
 /* Logging macro */
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
@@ -222,7 +224,8 @@ static int32_t msm_sensor_fill_eeprom_subdevid_by_name(
 				s_ctrl->sensordata->eeprom_name);
 			of_node_put(src_node);
 			userspace_probe = 1;
-			if (count > 1)
+
+			if (count > 5)  
 				return -EINVAL;
 		}
 		if (!userspace_probe &&
@@ -754,6 +757,10 @@ int32_t msm_sensor_driver_probe(void *setting,
 	unsigned long                        mount_pos = 0;
 	uint32_t                             is_yuv;
 
+#ifdef CONFIG_KERNEL_CUSTOM_E7S
+	uint32_t                             i = 0;
+#endif
+
 	/* Validate input parameters */
 	if (!setting) {
 		pr_err("failed: slave_info %pK", setting);
@@ -802,6 +809,8 @@ int32_t msm_sensor_driver_probe(void *setting,
 
 		slave_info->i2c_freq_mode = slave_info32->i2c_freq_mode;
 		slave_info->sensor_id_info = slave_info32->sensor_id_info;
+		slave_info->vendor_id_info = slave_info32->vendor_id_info;
+		slave_info->vcm_id_info = slave_info32->vcm_id_info;
 
 		slave_info->slave_addr = slave_info32->slave_addr;
 		slave_info->power_setting_array.size =
@@ -848,6 +857,35 @@ int32_t msm_sensor_driver_probe(void *setting,
 		rc = -EINVAL;
 		goto free_slave_info;
 	}
+
+#ifdef CONFIG_KERNEL_CUSTOM_E7S
+	if( (strcmp(slave_info->eeprom_name,"whyred_s5k5e8_ofilm_i") == 0) ||
+		(strcmp(slave_info->eeprom_name,"whyred_s5k5e8_qtech_ii") == 0)){
+
+		for(i=0; i<CAMERA_VENDOR_EEPROM_COUNT_MAX; i++){
+			if(s_vendor_eeprom[i].eeprom_name != NULL){
+				printk(" slave_info->eeprom_name=%s, s_vendor_eeprom[%d]=%s, module_id=%d\n",
+					slave_info->eeprom_name, i, s_vendor_eeprom[i].eeprom_name, s_vendor_eeprom[i].module_id);
+				if(strcmp(slave_info->eeprom_name, s_vendor_eeprom[i].eeprom_name) == 0){
+
+					if(((strcmp(slave_info->eeprom_name,"whyred_s5k5e8_ofilm_i") == 0) && 
+						(s_vendor_eeprom[i].module_id == MID_OFILM)) || 
+						((strcmp(slave_info->eeprom_name,"whyred_s5k5e8_qtech_ii") == 0) && 
+						(s_vendor_eeprom[i].module_id == MID_QTECH))){
+							printk("Lc module found!probe continue!\n");
+						break;
+					}
+				} 
+			}
+		}
+
+		if(i >= CAMERA_VENDOR_EEPROM_COUNT_MAX){
+			pr_err(" Lc module not found!probe break failed!\n");
+			rc = -EFAULT;
+			goto free_slave_info;
+		}
+	}
+#endif
 
 	/* Print slave info */
 	CDBG("camera id %d Slave addr 0x%X addr_type %d\n",
@@ -901,11 +939,11 @@ int32_t msm_sensor_driver_probe(void *setting,
 		 * and probe already succeeded for that sensor. Ignore this
 		 * probe
 		 */
-		if (slave_info->sensor_id_info.sensor_id ==
-			s_ctrl->sensordata->cam_slave_info->
-				sensor_id_info.sensor_id &&
-			!(strcmp(slave_info->sensor_name,
-			s_ctrl->sensordata->cam_slave_info->sensor_name))) {
+		if ((slave_info->sensor_id_info.sensor_id ==
+			s_ctrl->sensordata->cam_slave_info->sensor_id_info.sensor_id) &&
+			(!(strcmp(slave_info->sensor_name,
+			s_ctrl->sensordata->cam_slave_info->sensor_name))) && (slave_info->vendor_id_info.vendor_id ==
+			s_ctrl->sensordata->cam_slave_info->vendor_id_info.vendor_id)) {
 			pr_err("slot%d: sensor name: %s sensor id%d already probed\n",
 				slave_info->camera_id,
 				slave_info->sensor_name,
@@ -1004,6 +1042,8 @@ CSID_TG:
 	s_ctrl->sensordata->actuator_name = slave_info->actuator_name;
 	s_ctrl->sensordata->ois_name = slave_info->ois_name;
 	s_ctrl->sensordata->flash_name = slave_info->flash_name;
+	s_ctrl->sensordata->vendor_id_info = &(slave_info->vendor_id_info);
+	s_ctrl->sensordata->vcm_id_info = &(slave_info->vcm_id_info);
 	/*
 	 * Update eeporm subdevice Id by input eeprom name
 	 */
