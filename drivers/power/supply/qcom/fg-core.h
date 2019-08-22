@@ -438,6 +438,7 @@ struct fg_chip {
 	int			last_recharge_volt_mv;
 	int			delta_temp_irq_count;
 	int			esr_timer_charging_default[NUM_ESR_TIMERS];
+	int                     battery_full_design;
 	enum slope_limit_status	slope_limit_sts;
 	enum esr_filter_status	esr_flt_sts;
 	bool			profile_available;
@@ -522,4 +523,5 @@ extern void fg_circ_buf_clr(struct fg_circ_buf *);
 extern int fg_circ_buf_avg(struct fg_circ_buf *, int *);
 extern int fg_circ_buf_median(struct fg_circ_buf *, int *);
 extern int fg_lerp(const struct fg_pt *, size_t, s32, s32 *);
+extern int fg_dma_mem_req(struct fg_chip *, bool);
 #endif
