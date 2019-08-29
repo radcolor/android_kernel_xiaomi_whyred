@@ -32,6 +32,7 @@
 #include "cds_concurrency.h"
 #include "cds_utils.h"
 #include "wma_sar_public_structs.h"
+#include "ol_txrx.h"
 
 typedef void *WMA_HANDLE;
 
@@ -607,4 +608,16 @@ void wma_cleanup_vdev_resp_and_hold_req(void *priv);
  */
 QDF_STATUS wma_send_dhcp_ind(uint16_t type, uint8_t device_mode,
 			     uint8_t *mac_addr, uint8_t *sta_mac_addr);
+
+/**
+ * wma_mgmt_pktcapture_status_map() - map Tx status for MGMT packets
+ * with packet capture Tx status
+ * @status: Tx status
+ * @is_data_pkt: Tx status for data packets
+ *
+ * Return: pktcapture_tx_status enum
+ */
+enum pktcapture_tx_status
+wma_mgmt_pktcapture_status_map(uint8_t status);
+
 #endif
