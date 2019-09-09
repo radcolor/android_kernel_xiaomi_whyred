@@ -42,6 +42,8 @@
 #include <linux/fb.h>
 #include <linux/mdss_io_util.h>
 
+#include <linux/kthread.h>
+#include <linux/sched/rt.h>
 
 #define FPC_TTW_HOLD_TIME 2000
 #define FP_UNLOCK_REJECTION_TIMEOUT (FPC_TTW_HOLD_TIME - 500)
@@ -59,6 +61,9 @@
 
 #define tyt_debug printk("tyt %s:%d\n",__func__,__LINE__) 
 static struct proc_dir_entry *proc_entry;
+static struct kthread_work work;
+static struct kthread_worker fp_boost_worker;
+static struct task_struct *fp_boost_worker_thread;
 extern int fpsensor;
 
 static const char * const pctl_names[] = {
@@ -96,7 +101,6 @@ struct fpc1020_data {
 	struct notifier_block fb_notifier;
 	bool fb_black;
 	bool wait_finger_down;
-	struct work_struct work;
 };
 
 static int vreg_setup(struct fpc1020_data *fpc1020, const char *name,
@@ -493,7 +497,7 @@ static const struct attribute_group attribute_group = {
 	.attrs = attributes,
 };
 
-static void notification_work(struct work_struct *work)
+static void notification_work(struct kthread_work *work)
 {
 	mdss_prim_panel_fb_unblank(FP_UNLOCK_REJECTION_TIMEOUT);
 	printk("unblank\n");
@@ -515,8 +519,8 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
        	if (fpc1020->wait_finger_down && fpc1020->fb_black) {
 		printk("%s enter\n", __func__);
 		fpc1020->wait_finger_down = false;
-		schedule_work(&fpc1020->work);
-	}  
+		queue_kthread_work(&fp_boost_worker, &work);
+	}
 	return IRQ_HANDLED;
 }
 
@@ -625,8 +629,15 @@ static int fpc1020_probe(struct platform_device *pdev)
 	struct device_node *np = dev->of_node;
 	struct fpc1020_data *fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
 			GFP_KERNEL);
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	cpumask_t sys_bg_mask;
 
         tyt_debug;
+        /* Hardcode the cpumask to bind the kthread to it | cpu 0 .. 4*/
+	for (i = 0; i <= 4; i++) {
+		cpumask_set_cpu(i, &sys_bg_mask);
+	}
+
 	if (!fpc1020) {
 		dev_err(dev,
 			"failed to allocate memory for struct fpc1020_data\n");
@@ -740,11 +751,22 @@ static int fpc1020_probe(struct platform_device *pdev)
                  printk("gf3208 Create proc entry success!");
              }
 
+	init_kthread_worker(&fp_boost_worker);
+	fp_boost_worker_thread = kthread_create(kthread_worker_fn,&fp_boost_worker,"fp_boost_worker_thread");
+	if (IS_ERR(fp_boost_worker_thread)) {
+		pr_err("fpc1020: Failed to initaialize fp worker kthread");
+		return -EFAULT;
+	}
+	sched_setscheduler(fp_boost_worker_thread, SCHED_FIFO, &param);
+
+	/* Bind it to hardcoded cpumask and wake it up */
+	kthread_bind_mask(fp_boost_worker_thread, &sys_bg_mask);
+	wake_up_process(fp_boost_worker_thread);
 
 	dev_info(dev, "%s: ok\n", __func__);
 	fpc1020->fb_black = false;
 	fpc1020->wait_finger_down = false;
-	INIT_WORK(&fpc1020->work, notification_work);
+	init_kthread_work(&work, notification_work);
 	fpc1020->fb_notifier = fpc_notif_block;
 	fb_register_client(&fpc1020->fb_notifier);
 
