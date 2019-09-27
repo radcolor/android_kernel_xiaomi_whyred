@@ -345,4 +345,3 @@ static int __init msm_performance_init(void)
 	return 0;
 }
 late_initcall(msm_performance_init);
-
