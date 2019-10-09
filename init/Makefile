@@ -20,7 +20,7 @@ mounts-$(CONFIG_BLK_DEV_DM)	+= do_mounts_dm.o
 ifneq ($(PLATFORM_VERSION),)
 CFLAGS_main.o += -DCONFIG_DEFAULT_ANDROID_VERSION=$(PLATFORM_VERSION)
 else
-CFLAGS_main.o += -DCONFIG_DEFAULT_ANDROID_VERSION=9
+CFLAGS_main.o += -DCONFIG_DEFAULT_ANDROID_VERSION=10
 endif
 
 # dependencies on generated files need to be listed explicitly
