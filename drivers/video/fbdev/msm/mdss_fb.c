@@ -997,6 +997,9 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 		pr_err("%s,not available\n",__func__);
 		return -1;
 	}
+	
+ 	/* Enable sRGB by default */
+ 	first_srgb_state = 2;
 
         //This simply fixes sRGB reset after screen off/on
         if(srgb_enabled == 1){
