@@ -106,6 +106,7 @@ config ARM64
 	select HAVE_ARM_SMCCC
 	select ARCH_HAS_PTE_SPECIAL
 	select ARCH_SUPPORTS_SPECULATIVE_PAGE_FAULT
+	select THREAD_INFO_IN_TASK
 	help
 	  ARM 64-bit (AArch64) Linux support.
 
