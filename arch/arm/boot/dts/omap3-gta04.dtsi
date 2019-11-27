@@ -28,7 +28,6 @@
 
 	aliases {
 		display0 = &lcd;
-		display1 = &tv0;
 	};
 
 	gpio-keys {
@@ -71,7 +70,7 @@
 		#sound-dai-cells = <0>;
 	};
 
-	spi_lcd: spi_lcd {
+	spi_lcd {
 		compatible = "spi-gpio";
 		#address-cells = <0x1>;
 		#size-cells = <0x0>;
@@ -460,12 +459,6 @@
 	regulator-max-microvolt = <3150000>;
 };
 
-/* Needed to power the DPI pins */
-
-&vpll2 {
-	regulator-always-on;
-};
-
 &dss {
 	pinctrl-names = "default";
 	pinctrl-0 = < &dss_dpi_pins >;
@@ -529,22 +522,22 @@
 
 		bootloaders@80000 {
 			label = "U-Boot";
-			reg = <0x80000 0x1c0000>;
+			reg = <0x80000 0x1e0000>;
 		};
 
-		bootloaders_env@240000 {
+		bootloaders_env@260000 {
 			label = "U-Boot Env";
-			reg = <0x240000 0x40000>;
+			reg = <0x260000 0x20000>;
 		};
 
 		kernel@280000 {
 			label = "Kernel";
-			reg = <0x280000 0x600000>;
+			reg = <0x280000 0x400000>;
 		};
 
-		filesystem@880000 {
+		filesystem@680000 {
 			label = "File System";
-			reg = <0x880000 0>;	/* 0 = MTDPART_SIZ_FULL */
+			reg = <0x680000 0xf980000>;
 		};
 	};
 };

@@ -1130,10 +1130,8 @@ static int vfio_msi_cap_len(struct vfio_pci_device *vdev, u8 pos)
 		return -ENOMEM;
 
 	ret = init_pci_cap_msi_perm(vdev->msi_perm, len, flags);
-	if (ret) {
-		kfree(vdev->msi_perm);
+	if (ret)
 		return ret;
-	}
 
 	return len;
 }
