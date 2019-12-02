@@ -7334,10 +7334,10 @@ long qseecom_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		break;
 	}
 	case QSEECOM_IOCTL_APP_LOADED_QUERY_REQ: {
-		 if ((data->type != QSEECOM_GENERIC) &&
+		if ((data->type != QSEECOM_GENERIC) &&
 			(data->type != QSEECOM_CLIENT_APP)) {
 			pr_err("app loaded query req: invalid handle (%d)\n",
-						data->type);
+								data->type);
 			ret = -EINVAL;
 			break;
 		}
