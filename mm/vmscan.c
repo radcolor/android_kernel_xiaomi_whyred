@@ -146,7 +146,7 @@ struct scan_control {
 /*
  * From 0 .. 100.  Higher means more swappy.
  */
-int vm_swappiness = 60;
+int vm_swappiness = 40;
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.
@@ -2157,6 +2157,7 @@ static void get_scan_count(struct lruvec *lruvec, int swappiness,
 		scan_balance = SCAN_FILE;
 		goto out;
 	}
+
 
 	/*
 	 * Global reclaim will swap to prevent OOM even with no

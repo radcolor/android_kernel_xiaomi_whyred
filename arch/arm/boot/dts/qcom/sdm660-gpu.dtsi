@@ -63,14 +63,14 @@
 		reg-names = "kgsl_3d0_reg_memory", "qfprom_memory";
 		interrupts = <0 300 0>;
 		interrupt-names = "kgsl_3d0_irq";
+		#cooling-cells = <2>;
 		qcom,id = <0>;
 
 		qcom,chipid = <0x05010200>;
 
 		qcom,initial-pwrlevel = <6>;
 
-		/* <HZ/12> */
-		qcom,idle-timeout = <80>;
+		qcom,idle-timeout = <60>;
 
 		qcom,highest-bank-bit = <14>;
 
@@ -86,6 +86,9 @@
 
 		clock-names = "core_clk", "iface_clk", "rbbmtimer_clk",
 			"mem_clk", "alt_mem_iface_clk", "rbcpr_clk";
+
+		/* To disable GPU wake up on touch event */
+		qcom,disable-wake-on-touch;
 
 		/* Bus Scale Settings */
 		qcom,gpubw-dev = <&gpubw>;
@@ -558,7 +561,7 @@
 
 				qcom,speed-bin = <90>;
 
-				qcom,initial-pwrlevel = <2>;
+				qcom,initial-pwrlevel = <3>;
 
 				/* SVS_L1 */
 				qcom,gpu-pwrlevel@0 {
@@ -687,6 +690,7 @@
 		qcom,secure_align_mask = <0xfff>;
 		qcom,retention;
 		qcom,hyp_secure_alloc;
+		qcom,secure_pt_early_alloc;
 
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";
