@@ -2,9 +2,6 @@
 set -e
 USER_AGENT="WireGuard-AndroidROMBuild/0.2 ($(uname -a))"
 
-exec 9>.wireguard-fetch-lock
-flock -n 9 || exit 0
-
 [[ $(( $(date +%s) - $(stat -c %Y "net/wireguard/.check" 2>/dev/null || echo 0) )) -gt 86400 ]] || exit 0
 
 while read -r distro package version _; do
