@@ -122,6 +122,8 @@ static int hdmi_tx_get_cable_status(struct platform_device *pdev, u32 vote);
 static int hdmi_tx_update_ppm(struct hdmi_tx_ctrl *hdmi_ctrl, s32 ppm);
 static int hdmi_tx_enable_pll_update(struct hdmi_tx_ctrl *hdmi_ctrl,
 	int enable);
+static void hdmi_tx_hpd_polarity_setup(struct hdmi_tx_ctrl *hdmi_ctrl,
+		bool polarity);
 
 static struct mdss_hw hdmi_tx_hw = {
 	.hw_ndx = MDSS_HW_HDMI,
@@ -429,9 +431,17 @@ static inline void hdmi_tx_send_audio_notification(
 	}
 }
 
-static inline void hdmi_tx_send_video_notification(
+static inline int hdmi_tx_send_video_notification(
 	struct hdmi_tx_ctrl *hdmi_ctrl, int val, bool async)
 {
+	int ret = 0;
+
+	if (!hdmi_ctrl) {
+		pr_err("invalid hdmi_ctrl input\n");
+		ret = -EINVAL;
+		goto end;
+	}
+
 	if (hdmi_ctrl && hdmi_ctrl->ext_audio_data.intf_ops.hpd) {
 		u32 flags = 0;
 
@@ -440,9 +450,13 @@ static inline void hdmi_tx_send_video_notification(
 		else
 			flags |= MSM_EXT_DISP_HPD_VIDEO;
 
-		hdmi_ctrl->ext_audio_data.intf_ops.hpd(hdmi_ctrl->ext_pdev,
-				hdmi_ctrl->ext_audio_data.type, val, flags);
+		ret = hdmi_ctrl->ext_audio_data.intf_ops.hpd(
+				hdmi_ctrl->ext_pdev,
+				hdmi_ctrl->ext_audio_data.type,
+				val, flags);
 	}
+end:
+	return ret;
 }
 
 static inline void hdmi_tx_ack_state(
@@ -548,8 +562,8 @@ static ssize_t hdmi_tx_sysfs_rda_connected(struct device *dev,
 	}
 
 	mutex_lock(&hdmi_ctrl->tx_lock);
-	ret = snprintf(buf, PAGE_SIZE, "%d\n", hdmi_ctrl->hpd_state);
-	DEV_DBG("%s: '%d'\n", __func__, hdmi_ctrl->hpd_state);
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", hdmi_ctrl->notification_status);
+	DEV_DBG("%s: '%d'\n", __func__, hdmi_ctrl->notification_status);
 	mutex_unlock(&hdmi_ctrl->tx_lock);
 
 	return ret;
@@ -1848,7 +1862,6 @@ static int hdmi_tx_read_edid(struct hdmi_tx_ctrl *hdmi_ctrl)
 		}
 	} while ((cea_blks-- > 0) && (block++ < MAX_EDID_BLOCKS));
 end:
-
 	return ret;
 }
 
@@ -2429,11 +2442,44 @@ static void hdmi_tx_update_hdr_info(struct hdmi_tx_ctrl *hdmi_ctrl)
 	}
 }
 
+static int hdmi_tx_notify_events(struct hdmi_tx_ctrl *hdmi_ctrl, int val)
+{
+	int rc = 0;
+
+	if (val == hdmi_ctrl->notification_status) {
+		pr_debug("No change in notification status %d -> %d\n",
+				hdmi_ctrl->notification_status, val);
+		goto end;
+	}
+	hdmi_ctrl->notification_status = val;
+
+	atomic_set(&hdmi_ctrl->notification_pending, 1);
+	if (val) {
+		rc = hdmi_tx_send_video_notification(hdmi_ctrl, val, true);
+	} else {
+		hdmi_tx_send_audio_notification(hdmi_ctrl, val);
+		rc = hdmi_tx_send_video_notification(hdmi_ctrl, val, true);
+	}
+
+	if (!rc) {
+		pr_debug("Successfully sent %s notification\n",
+			val ? "CONNECT" : "DISCONNECT");
+	} else {
+		pr_err("%s notification failed\n",
+			val ? "CONNECT" : "DISCONNECT");
+		atomic_set(&hdmi_ctrl->notification_pending, 0);
+	}
+end:
+	return rc;
+}
+
 static void hdmi_tx_hpd_int_work(struct work_struct *work)
 {
 	struct hdmi_tx_ctrl *hdmi_ctrl = NULL;
 	int rc = -EINVAL;
 	int retry = MAX_EDID_READ_RETRY;
+	unsigned long flags;
+	u32 hpd_state;
 
 	hdmi_ctrl = container_of(work, struct hdmi_tx_ctrl, hpd_int_work);
 	if (!hdmi_ctrl) {
@@ -2441,36 +2487,46 @@ static void hdmi_tx_hpd_int_work(struct work_struct *work)
 		return;
 	}
 
-	mutex_lock(&hdmi_ctrl->tx_lock);
-
 	if (!hdmi_ctrl->hpd_initialized) {
 		DEV_DBG("hpd not initialized\n");
-		mutex_unlock(&hdmi_ctrl->tx_lock);
 		return;
 	}
 
-	DEV_DBG("%s: %s\n", __func__,
-		hdmi_ctrl->hpd_state ? "CONNECT" : "DISCONNECT");
+	spin_lock_irqsave(&hdmi_ctrl->hpd_state_lock, flags);
+	hpd_state = hdmi_ctrl->hpd_state;
+	spin_unlock_irqrestore(&hdmi_ctrl->hpd_state_lock, flags);
 
-	if (hdmi_ctrl->hpd_state) {
+	DEV_DBG("%s: %s\n", __func__,
+		hpd_state ? "CONNECT" : "DISCONNECT");
+
+	reinit_completion(&hdmi_ctrl->notification_comp);
+
+	if (atomic_read(&hdmi_ctrl->notification_pending)) {
+		pr_debug("wait for previous event to finish\n");
+		rc = wait_for_completion_timeout(&hdmi_ctrl->notification_comp,
+				HZ);
+		if (rc <= 0) {
+			pr_debug("wait for pending notification timed out\n");
+			hdmi_ctrl->pending_event = hpd_state;
+			hdmi_ctrl->handle_pe = true;
+			return;
+		}
+	}
+
+	if (hpd_state) {
+		hdmi_tx_hpd_polarity_setup(hdmi_ctrl,
+				HPD_DISCONNECT_POLARITY);
+
 		while (rc && retry--)
 			rc = hdmi_tx_read_sink_info(hdmi_ctrl);
 		if (!retry && rc)
 			pr_warn_ratelimited("%s: EDID read failed\n", __func__);
 		hdmi_tx_update_deep_color(hdmi_ctrl);
 		hdmi_tx_update_hdr_info(hdmi_ctrl);
-	}
 
-	mutex_unlock(&hdmi_ctrl->tx_lock);
-
-	if (hdmi_ctrl->hpd_state)
-		hdmi_tx_send_video_notification(hdmi_ctrl,
-				hdmi_ctrl->hpd_state, true);
-	else {
-		hdmi_tx_send_audio_notification(hdmi_ctrl,
-				hdmi_ctrl->hpd_state);
-		hdmi_tx_send_video_notification(hdmi_ctrl,
-				hdmi_ctrl->hpd_state, true);
+		hdmi_tx_notify_events(hdmi_ctrl, hpd_state);
+	} else {
+		hdmi_tx_notify_events(hdmi_ctrl, hpd_state);
 	}
 } /* hdmi_tx_hpd_int_work */
 
@@ -3363,8 +3419,6 @@ static int hdmi_tx_power_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 	hdmi_ctrl->panel_power_on = true;
 
-	hdmi_tx_hpd_polarity_setup(hdmi_ctrl, HPD_DISCONNECT_POLARITY);
-
 	if (hdmi_ctrl->hdmi_tx_hpd_done)
 		hdmi_ctrl->hdmi_tx_hpd_done(hdmi_ctrl->downstream_data);
 
@@ -3698,6 +3752,11 @@ static int hdmi_tx_dev_init(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 	spin_lock_init(&hdmi_ctrl->hpd_state_lock);
 
+	hdmi_ctrl->pending_event = 0;
+	hdmi_ctrl->handle_pe = false;
+	atomic_set(&hdmi_ctrl->notification_pending, 0);
+	init_completion(&hdmi_ctrl->notification_comp);
+
 	return 0;
 
 fail_create_workq:
@@ -3973,9 +4032,11 @@ sysfs_err:
 
 static int hdmi_tx_evt_handle_check_param(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
+	struct mdss_panel_info *pinfo = &hdmi_ctrl->panel_data.panel_info;
 	int new_vic = -1;
 	int rc = 0;
 
+	pinfo->is_ce_mode = false;
 	new_vic = hdmi_panel_get_vic(hdmi_ctrl->evt_arg, &hdmi_ctrl->ds_data);
 
 	if ((new_vic < 0) || (new_vic > HDMI_VFRMT_MAX)) {
@@ -3992,6 +4053,7 @@ static int hdmi_tx_evt_handle_check_param(struct hdmi_tx_ctrl *hdmi_ctrl)
 		rc = 1;
 		DEV_DBG("%s: res change %d ==> %d\n", __func__,
 			hdmi_ctrl->vic, new_vic);
+		goto done;
 	}
 
 	/*
@@ -4003,6 +4065,8 @@ static int hdmi_tx_evt_handle_check_param(struct hdmi_tx_ctrl *hdmi_ctrl)
 		rc = 1;
 		DEV_DBG("%s: Bitdepth changed\n", __func__);
 	}
+done:
+	pinfo->is_ce_mode = hdmi_util_is_ce_mode(new_vic);
 end:
 	return rc;
 }
@@ -4124,8 +4188,12 @@ end:
 static int hdmi_tx_evt_handle_close(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
 	if (hdmi_ctrl->hpd_feature_on && hdmi_ctrl->hpd_initialized &&
-	    !hdmi_ctrl->hpd_state)
+	    !hdmi_ctrl->notification_status) {
+		atomic_set(&hdmi_ctrl->notification_pending, 0);
+		complete_all(&hdmi_ctrl->notification_comp);
+
 		hdmi_tx_hpd_polarity_setup(hdmi_ctrl, HPD_CONNECT_POLARITY);
+	}
 
 	return 0;
 }
@@ -4177,11 +4245,22 @@ static int hdmi_tx_post_evt_handle_unblank(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
 	hdmi_tx_ack_state(hdmi_ctrl, true);
 	hdmi_tx_send_audio_notification(hdmi_ctrl, true);
+
+	atomic_set(&hdmi_ctrl->notification_pending, 0);
+	complete_all(&hdmi_ctrl->notification_comp);
+
+	if (hdmi_ctrl->handle_pe) {
+		hdmi_ctrl->handle_pe = false;
+		hdmi_tx_notify_events(hdmi_ctrl, hdmi_ctrl->pending_event);
+	}
+
 	return 0;
 }
 
 static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
+	int rc = 0;
+
 	if (!hdmi_ctrl->hpd_feature_on)
 		return 0;
 
@@ -4193,8 +4272,18 @@ static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 			&hdmi_ctrl->hpd_int_done, HZ/10);
 		if (!timeout) {
 			pr_debug("cable removed during suspend\n");
-			hdmi_tx_send_audio_notification(hdmi_ctrl, 0);
-			hdmi_tx_send_video_notification(hdmi_ctrl, 0, true);
+			if (atomic_read(&hdmi_ctrl->notification_pending)) {
+				pr_debug("wait for previous event to finish\n");
+				rc = wait_for_completion_timeout(
+					&hdmi_ctrl->notification_comp, HZ);
+				if (rc <= 0) {
+					pr_debug("wait for pending notification timed out\n");
+					hdmi_ctrl->pending_event = 0;
+					hdmi_ctrl->handle_pe = true;
+					return 0;
+				}
+			}
+			hdmi_tx_notify_events(hdmi_ctrl, 0);
 		}
 	}
 
@@ -4203,10 +4292,24 @@ static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 static int hdmi_tx_post_evt_handle_panel_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
+	int rc = 0;
+
 	if (hdmi_ctrl->panel_suspend) {
 		pr_debug("panel suspend has triggered\n");
-		hdmi_tx_send_audio_notification(hdmi_ctrl, 0);
-		hdmi_tx_send_video_notification(hdmi_ctrl, 0, true);
+
+		if (atomic_read(&hdmi_ctrl->notification_pending)) {
+			pr_debug("wait for previous event to finish\n");
+			rc = wait_for_completion_timeout(
+					&hdmi_ctrl->notification_comp,
+					HZ);
+			if (rc <= 0) {
+				pr_debug("wait for pending notification timed out\n");
+				hdmi_ctrl->pending_event = 0;
+				hdmi_ctrl->handle_pe = true;
+				return 0;
+			}
+		}
+		hdmi_tx_notify_events(hdmi_ctrl, 0);
 	}
 
 	return 0;
@@ -5016,6 +5119,7 @@ static int hdmi_tx_probe(struct platform_device *pdev)
 		hdmi_ctrl->pdata.primary = true;
 		hdmi_ctrl->vic = vic;
 		hdmi_ctrl->panel_data.panel_info.is_prim_panel = true;
+		hdmi_ctrl->panel_data.panel_info.is_ce_mode = true;
 		hdmi_ctrl->panel_data.panel_info.cont_splash_enabled =
 			hdmi_ctrl->mdss_util->panel_intf_status(DISPLAY_1,
 					MDSS_PANEL_INTF_HDMI) ? true : false;
