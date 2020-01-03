@@ -16425,6 +16425,8 @@ struct hdd_config {
 
 	bool pktcap_mode_enable;
 	uint8_t pktcapture_mode;
+	bool ShortGI80MhzEnable;
+	bool ShortGI160MhzEnable;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))
