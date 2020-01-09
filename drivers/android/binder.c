@@ -804,6 +804,8 @@ static bool binder_worklist_empty_ilocked(struct list_head *list)
  *
  * Return: true if there are no items on list, else false
  */
+ 
+/*
 static bool binder_worklist_empty(struct binder_proc *proc,
 				  struct list_head *list)
 {
@@ -814,6 +816,7 @@ static bool binder_worklist_empty(struct binder_proc *proc,
 	binder_inner_proc_unlock(proc);
 	return ret;
 }
+*/
 
 /**
  * binder_enqueue_work_ilocked() - Add an item to the work list
