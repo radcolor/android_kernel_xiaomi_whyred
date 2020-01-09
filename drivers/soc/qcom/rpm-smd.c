@@ -768,8 +768,8 @@ static int msm_rpm_flush_requests(bool print)
 	for (t = rb_first(&tr_root); t; t = rb_next(t)) {
 
 		struct slp_buf *s = rb_entry(t, struct slp_buf, node);
-		unsigned int type = get_rsc_type(s->buf);
-		unsigned int id = get_rsc_id(s->buf);
+		//unsigned int type = get_rsc_type(s->buf);
+		//unsigned int id = get_rsc_id(s->buf);
 
 		if (!s->valid)
 			continue;
