@@ -1987,7 +1987,7 @@ static void check_perf_cl_peak_load(struct cluster *cl, u64 now)
 {
 	struct load_stats *pcpu_st;
 	unsigned int i, ret_mode, max_load = 0;
-	unsigned int total_load = 0, cpu_cnt = 0;
+	//unsigned int total_load = 0, cpu_cnt = 0;
 	unsigned long flags;
 	bool cpu_of_cluster_zero = true;
 
