@@ -1,0 +1,13 @@
+{
+  "kernel": {
+    "name": "RAD Kernel",
+    "version": "x2",
+    "link": "https://github.com/whyded/android_kernel_xiaomi_whyred/releases/download/x2/rad-x2-whyred.zip",
+    "changelog_url": "https://raw.githubusercontent.com/whyded/android_kernel_xiaomi_whyred/8f7a3f9cbd1181f5e04de58aa9d30c8e2f0e2273/changelogs.txt",
+    "date": "2020-01-12",
+    "sha1": "d914e5cd4778d22e19f952933064c0eeaff26342"
+  },
+  "support": {
+    "link": "https://t.me/radkernelgroup"
+  }
+}
