@@ -1,0 +1,15 @@
+Changelogs RAD-x2(EAS) for whyred
+
+- Merged Linux - 4.4.208
+- Merged CAF tag LA.UM.8.2.r1-05100-sdm660.0(Q)
+- P tags for wlan(qcacld-3.0, qca-wifi-host-cmn, fw-api)
+- Implement rapid GC for android
+  and some more F2FS improvements
+- added exFAT drivers from arter97
+- added iosched_switcher
+- disabled tracing/loging from various places
+- added wireguard module 20191226
+- added simple msm thermal
+- fixed WhatsApp video/voice call crash bug
+- compiled with aosp clang
+- and many improvements
