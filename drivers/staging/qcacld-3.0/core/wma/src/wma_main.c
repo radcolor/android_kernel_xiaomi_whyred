@@ -2389,6 +2389,29 @@ void wma_wmi_stop(void)
 	wmi_stop(wma_handle->wmi_handle);
 }
 
+#ifdef FW_THERMAL_THROTTLE_SUPPORT
+/**
+ * wma_set_thermal_config_params() - Configure the thermal mitigation ini params
+ * @wma_handle: The wma_handle
+ * @cds_cfg: The CDS config structure
+ *
+ * Return: None
+ */
+static inline
+void wma_set_thermal_config_params(tp_wma_handle wma_handle,
+				   struct cds_config_info *cds_cfg)
+{
+	wma_handle->thermal_sampling_time = cds_cfg->thermal_sampling_time;
+	wma_handle->thermal_throt_dc = cds_cfg->thermal_throt_dc;
+}
+#else
+static inline
+void wma_set_thermal_config_params(tp_wma_handle wma_handle,
+				   struct cds_config_info *cds_cfg)
+{
+}
+#endif
+
 /**
  * wma_open() - Allocate wma context and initialize it.
  * @cds_context:  cds context
@@ -2622,6 +2645,7 @@ QDF_STATUS wma_open(void *cds_context,
 	wma_handle->is_lpass_enabled = cds_cfg->is_lpass_enabled;
 #endif
 	wma_set_nan_enable(wma_handle, cds_cfg);
+	wma_set_thermal_config_params(wma_handle, cds_cfg);
 	/*
 	 * Indicates if DFS Phyerr filtering offload
 	 * is Enabled/Disabed from ini
@@ -2905,6 +2929,8 @@ QDF_STATUS wma_open(void *cds_context,
 				   WMI_ROAM_SYNCH_FRAME_EVENTID,
 				   wma_roam_synch_frame_event_handler,
 				   WMA_RX_SERIALIZER_CTX);
+
+	wma_register_pmkid_req_event_handler(wma_handle);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 				WMI_RSSI_BREACH_EVENTID,
@@ -8375,7 +8401,7 @@ QDF_STATUS wma_mc_process_msg(void *cds_context, cds_msg_t *msg)
 		qdf_mem_free(msg->bodyptr);
 		break;
 	default:
-		WMA_LOGE("Unhandled WMA message of type %d", msg->type);
+		WMA_LOGD("Unhandled WMA message of type %d", msg->type);
 		if (msg->bodyptr)
 			qdf_mem_free(msg->bodyptr);
 	}
@@ -8395,7 +8421,7 @@ void wma_log_completion_timeout(void *data)
 {
 	tp_wma_handle wma_handle;
 
-	WMA_LOGE("%s: Timeout occured for log completion command", __func__);
+	WMA_LOGD("%s: Timeout occurred for log completion command", __func__);
 
 	wma_handle = (tp_wma_handle) data;
 	if (!wma_handle)
