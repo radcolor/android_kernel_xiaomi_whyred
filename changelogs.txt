@@ -1,0 +1,148 @@
+Rad kernel v3.7/x3.7 is up 🔥
+
+- Merged Linux - 4.4.216
+- Updated qcacld-3.0, qca-wifi-host-cmn from CAF TAG - LA.UM.7.2.r1-08500-sdm660.0
+- And some miscalleneous improvements
+- Sources: GitHub (https://github.com/theradcolor/android_kernel_xiaomi_whyred)
+
+
+Rad Kernel x3.6 🔥
+
+- Changelogs same as x3.5.1
+- Updated energy costs for cpu and clusters with available frequencies from CAF's SDM660 4.14 sources
+
+
+Rad kernel v3.5.1/x3.5.1 is up 🔥
+
+- Merged Linux - 4.4.215
+- Merged tag LA.UM.8.2.r1-06200-sdm660.0
+- Updated wireguard to 0.0.20200215
+- Configured CIB and devfreq boost for OC build
+- Sources: GitHub (https://github.com/theradcolor/android_kernel_xiaomi_whyred)
+
+
+Rad kernel v3.5/x3.5 (whyred) is up 🔥
+
+- Merged Linux - 4.4.214
+- Updated wlan drivers (qcacld, qca-wifi-host-cmn) from LA.UM.7.2.r1-08200-sdm660.0
+- Updated wireguard to v0.0.20200205
+- Added DTS HEADPHONE:X driver
+- And some more fixes and improvements, check on GitHub (https://github.com/theradcolor/android_kernel_xiaomi_whyred)
+
+
+Rad kernel v3.3/x3.3 is up 🔥
+
+- Merged Linux - 4.4.213
+- Revert: revert: alsa: avoid leaks from PCM stream buffers
+- Fixed alsa from 213 upstream
+- Some camera improvement
+- Fixed dt2w on some ROMs
+- Check on GitHub (https://github.com/theradcolor/android_kernel_xiaomi_whyred)
+
+
+Rad kernel v3/x3 is up 🔥
+
+- Linux - 4.4.212
+- Rebased to als/kernel.lnx4.4.r38-rel
+- Merged CAF tag LA.UM.8.2.r2-00700-sdm660.0
+- Updated wireguard module to 20200128
+- Nuked unnecessary bloatwares
+- Updated wlan drivers from LA.UM.7.2.c6-04300-sdm660.0
+- and many more improvements, check on GitHub (https://github.com/theradcolor/android_kernel_xiaomi_whyred)
+
+
+Rad kernel v2.9.1/x2.9.1 is up 🔥
+
+- Merged Linux 4.4.212
+- And some misc fixes
+
+
+Rad kernel v2.9/x2.9 is up 🔥
+
+- Merged Linux 4.4.211
+- Merged CAF Tag LA.UM.8.2.r2-00600-sdm660.0
+
+
+Rad kernel v2.5/x2.5 is up 🔥
+
+- Linux 4.4.210
+- Updated wlan drivers(qcacld-3.0, qca-wifi-host-cmn, fw-api) from tag LA.UM.7.2.r1-08100-sdm660.0
+- Used tick rate of 80Hz
+- Used latest ak3(you don't need to flash magisk after Kernel)
+- Configured cpuset assist for EAS builds
+- Configured stock lmk
+- Compiled with Clang-10.0.1(r370808)
+- Some misc fixes
+- And improvements
+
+
+Rad Kernel v2.3/x2.3 is up 🔥
+
+- Merged Linux - 4.4.210
+- Configured cpu input boost
+- Used stock thermal drivers
+- Modified thermal mitigation a bit
+- Improved the performance critical IRQ framework
+- Decreased swappiness to 30
+- Disabled some tracers
+- CIB: Boost whenever zygote is forked
+- CIB: Boost max for short period of time
+- and many improvements
+
+
+Rad kernel v2/x2 is up 🔥
+
+- Merged Linux - 4.4.208
+- Merged CAF tag LA.UM.8.2.r1-05100-sdm660.0(Q)
+- P tags for wlan(qcacld-3.0, qca-wifi-host-cmn, fw-api)
+- Implement rapid GC for android
+and some more F2FS improvements
+- added exFAT drivers from arter97
+- added iosched_switcher
+- disabled tracing/loging from various places
+- added wireguard module 20191226
+- added simple msm thermal
+- fixed WhatsApp video/voice call crash bug
+- compiled with aosp clang
+- and many improvements
+
+
+Rad kernel v1.7/x1.7 is up 🔥
+
+- Linux 4.4.206
+- fixed pa_therm0 showing wrong temperature
+- some improvements
+
+
+Rad Kernel v1.6/x1.6 is up 🔥
+
+- Linux 4.4.206
+- added CDG tcp algorithm
+- added KLapse(A kernel level live display module)
+- arm: dts: disable ESD for panels
+- use power efficient workqueue
+- fp1020: irq as performance critical
+- block: use anxiety as default
+- and some misc fixes and improvements
+
+
+Rad Kernel v1.5 HMP 🔥
+
+- Linux 4.4.206
+- clean and rebased sources
+- tcp/ip: misc improvements
+- boeflla wakeblockers: added some more 
+- kernel: More improvements
+- added latest wireguard and tested
+
+
+Rad Kernel x1.5 EAS 🔥
+
+- Linux 4.4.206
+- clean and rebased sources
+- tcp/ip: misc improvements
+- boeflla wakeblockers: added some more 
+- sched: improved em
+- disable crc by default 
+- kernel: More improvements
+- added latest wireguard and tested
