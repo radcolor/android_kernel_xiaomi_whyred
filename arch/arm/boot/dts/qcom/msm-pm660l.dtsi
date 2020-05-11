@@ -210,15 +210,16 @@
 				qcom,mode = "pwm";
 				pwms = <&pm660l_pwm_3 0 0>;
 				qcom,pwm-us = <1000>;
-				qcom,ramp-step-ms = <128>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
 				linux,name = "red";
-				qcom,start-idx = <0>;
-				qcom,idx-len = <26>;
-				qcom,duty-pcts =
-					[3C 3C 3B 3A 3B 37 35 33 31 2E 2A 27 23
-					 1F 1B 17 13 0E 09 05 00 00 00 00 00 00];
+				qcom,start-idx = <1>;
+				qcom,duty-pcts = [ 00 0E 1C 2A 38 46 54 64 ];
+				qcom,idx-len = <8>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <50>;
+				qcom,lut-flags = <31>; /* loop, ramp up, reverse, pause hi, pause lo */
 				qcom,use-blink;
 			};
 
