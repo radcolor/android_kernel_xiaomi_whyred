@@ -395,10 +395,9 @@ static struct msm_rpm_master_stats_platform_data
 				strlen(master_name) + 1, GFP_KERNEL);
 		if (!pdata->masters[i])
 			goto err;
-
 		rpm_master_name_len = strlen(master_name);
-		strscpy(pdata->masters[i], master_name,
-					            rpm_master_name_len + 1);
+		strlcpy(pdata->masters[i], master_name,
+					rpm_master_name_len + 1);
 	}
 	return pdata;
 err:
