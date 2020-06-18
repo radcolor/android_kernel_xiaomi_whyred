@@ -84,11 +84,11 @@ static int f2fs_vm_page_mkwrite(struct vm_area_struct *vma,
 	}
 
 	/* block allocation */
-	__do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO, true);
+	f2fs_do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO, true);
 	set_new_dnode(&dn, inode, NULL, NULL, 0);
 	err = f2fs_get_block(&dn, page->index);
 	f2fs_put_dnode(&dn);
-	__do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO, false);
+	f2fs_do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO, false);
 	if (err) {
 		unlock_page(page);
 		goto out_sem;
