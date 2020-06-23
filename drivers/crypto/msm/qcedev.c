@@ -1749,7 +1749,7 @@ long qcedev_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 			err = -EFAULT;
 			goto exit_free_qcedev_areq;
 		}
-		}
+	    }
 		break;
 
 	case QCEDEV_IOCTL_SHA_FINAL_REQ:
