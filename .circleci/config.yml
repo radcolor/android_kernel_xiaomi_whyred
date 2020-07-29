@@ -1,0 +1,19 @@
+version: 2.1
+jobs:
+  compile:
+   docker:
+      - image: ubuntu:20.04
+   steps:
+      - run:
+          command: |
+           apt-get -y update && apt-get -y upgrade && DEBIAN_FRONTEND=noninteractive apt-get -y install bc build-essential curl aria2 libc6 libncurses5-dev bzip2 zip gcc clang libstdc++6 git wget gcc-multilib g++-multilib libssl-dev zstd
+           git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
+           cd source
+           git clone https://github.com/theradcolor/lazyscripts.git -b master
+           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/personal/ci
+           script -c "bash -x lazyscripts/personal/ci" build.log
+workflows:
+  version: 2.1
+  cooking:
+    jobs:
+      - compile
