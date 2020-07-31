@@ -33,6 +33,7 @@
 
 &i2c_1{
 	status = "ok";
+	qcom,clk-freq-out = <1000000>;
 	synaptics_dsx@20 {
 		compatible = "synaptics,dsx-i2c";
 		reg = <0x20>;
