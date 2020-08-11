@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -916,7 +916,11 @@ lim_send_sme_disassoc_ntf(tpAniSirGlobal pMac,
 					break;
 			}
 		}
-		if (sta_ds) {
+		if (sta_ds
+#ifdef WLAN_FEATURE_11W
+			&& (!sta_ds->rmfEnabled)
+#endif
+		) {
 			if (lim_add_sta(pMac, sta_ds, false, session) !=
 					eSIR_SUCCESS)
 					pe_err("could not Add STA with assocId: %d",
@@ -2514,9 +2518,6 @@ lim_send_sme_ap_channel_switch_resp(tpAniSirGlobal pMac,
 	bool is_ch_dfs = false;
 	enum phy_ch_width ch_width;
 	uint8_t ch_center_freq_seg1;
-
-	qdf_runtime_pm_allow_suspend(&psessionEntry->ap_ecsa_runtime_lock);
-	qdf_wake_lock_release(&psessionEntry->ap_ecsa_wakelock, 0);
 
 	pSmeSwithChnlParams = (tSwitchChannelParams *)
 			      qdf_mem_malloc(sizeof(tSwitchChannelParams));

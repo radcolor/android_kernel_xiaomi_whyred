@@ -79,8 +79,7 @@ static QDF_STATUS lim_send_hal_req_remain_on_chan_offload(tpAniSirGlobal pMac,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	pScanOffloadReq = qdf_mem_malloc(sizeof(tSirScanOffloadReq) +
-					 sizeof(uint8_t));
+	pScanOffloadReq = qdf_mem_malloc(sizeof(tSirScanOffloadReq));
 	if (NULL == pScanOffloadReq) {
 		pe_err("Memory allocation failed for pScanOffloadReq");
 		return QDF_STATUS_E_NOMEM;

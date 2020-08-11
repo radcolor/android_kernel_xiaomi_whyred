@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -312,10 +312,10 @@ static bool csr_roam_is_same_profile_keys(tpAniSirGlobal pMac,
 				   tCsrRoamProfile *pProfile2);
 
 static QDF_STATUS csr_roam_start_roaming_timer(tpAniSirGlobal pMac,
-					       uint32_t vdev_id,
+					       uint32_t sessionId,
 					       uint32_t interval);
 static QDF_STATUS csr_roam_stop_roaming_timer(tpAniSirGlobal pMac,
-					      uint32_t vdev_id);
+					      uint32_t sessionId);
 static void csr_roam_roaming_timer_handler(void *pv);
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static void csr_roam_roaming_offload_timer_action(tpAniSirGlobal mac_ctx,
@@ -1307,11 +1307,11 @@ static QDF_STATUS csr_roam_open(tpAniSirGlobal pMac)
 		for (i = 0; i < CSR_ROAM_SESSION_MAX; i++) {
 			pSession = CSR_GET_SESSION(pMac, i);
 			pSession->roamingTimerInfo.pMac = pMac;
-			pSession->roamingTimerInfo.vdev_id =
+			pSession->roamingTimerInfo.sessionId =
 				CSR_SESSION_ID_INVALID;
 		}
 		pMac->roam.WaitForKeyTimerInfo.pMac = pMac;
-		pMac->roam.WaitForKeyTimerInfo.vdev_id =
+		pMac->roam.WaitForKeyTimerInfo.sessionId =
 			CSR_SESSION_ID_INVALID;
 		status = qdf_mc_timer_init(&pMac->roam.hTimerWaitForKey,
 					  QDF_TIMER_TYPE_SW,
@@ -3099,8 +3099,6 @@ QDF_STATUS csr_change_default_config_param(tpAniSirGlobal pMac,
 			pParam->btm_sticky_time;
 		pMac->roam.configParam.btm_query_bitmask =
 			pParam->btm_query_bitmask;
-		pMac->roam.configParam.disable_4way_hs_offload =
-			pParam->disable_4way_hs_offload;
 
 		csr_set_11k_offload_config_param(&pMac->roam.configParam,
 						 pParam);
@@ -3453,8 +3451,6 @@ QDF_STATUS csr_get_config_param(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
 	pParam->btm_sticky_time = pMac->roam.configParam.btm_sticky_time;
 	pParam->btm_query_bitmask =
 		pMac->roam.configParam.btm_query_bitmask;
-	pParam->disable_4way_hs_offload =
-		pMac->roam.configParam.disable_4way_hs_offload;
 
 	csr_get_11k_offload_config_param(&pMac->roam.configParam, pParam);
 
@@ -4319,7 +4315,7 @@ QDF_STATUS csr_roam_issue_disassociate_sta_cmd(tpAniSirGlobal pMac,
 				sizeof(pCommand->u.roamCmd.peerMac));
 		pCommand->u.roamCmd.reason =
 			(tSirMacReasonCodes)p_del_sta_params->reason_code;
-		status = csr_queue_sme_command(pMac, pCommand, true);
+		status = csr_queue_sme_command(pMac, pCommand, false);
 		if (!QDF_IS_STATUS_SUCCESS(status)) {
 			sme_err("fail to send message status: %d", status);
 			csr_release_command_roam(pMac, pCommand);
@@ -4360,7 +4356,7 @@ QDF_STATUS csr_roam_issue_deauth_sta_cmd(tpAniSirGlobal pMac,
 			     sizeof(tSirMacAddr));
 		pCommand->u.roamCmd.reason =
 			(tSirMacReasonCodes)pDelStaParams->reason_code;
-		status = csr_queue_sme_command(pMac, pCommand, true);
+		status = csr_queue_sme_command(pMac, pCommand, false);
 		if (!QDF_IS_STATUS_SUCCESS(status)) {
 			sme_err("fail to send message status: %d", status);
 			csr_release_command_roam(pMac, pCommand);
@@ -7765,7 +7761,7 @@ static void csr_roam_process_join_res(tpAniSirGlobal mac_ctx,
 					CSR_WAIT_FOR_KEY_TIMEOUT_PERIOD;
 
 			/* Save session_id in case of timeout */
-			mac_ctx->roam.WaitForKeyTimerInfo.vdev_id =
+			mac_ctx->roam.WaitForKeyTimerInfo.sessionId =
 				(uint8_t) session_id;
 			/*
 			 * This time should be long enough for the rest
@@ -12954,7 +12950,7 @@ void csr_roam_roaming_timer_handler(void *pv)
 {
 	tCsrTimerInfo *pInfo = (tCsrTimerInfo *) pv;
 	tpAniSirGlobal pMac = pInfo->pMac;
-	uint32_t sessionId = pInfo->vdev_id;
+	uint32_t sessionId = pInfo->sessionId;
 	tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, sessionId);
 
 	if (!pSession) {
@@ -12986,68 +12982,50 @@ void csr_roam_roaming_timer_handler(void *pv)
 void csr_roam_roaming_offload_timeout_handler(void *timer_data)
 {
 	tCsrTimerInfo *timer_info = (tCsrTimerInfo *) timer_data;
-	cds_msg_t wma_msg = {0};
-	struct roam_sync_timeout_timer_info *req;
-	QDF_STATUS status;
 
 	if (timer_info) {
-		sme_debug("LFR3:roaming offload timer expired, session: %d",
-			  timer_info->vdev_id);
-
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
+			 "LFR3:roaming offload timer expired, session: %d",
+			  timer_info->sessionId);
 	} else {
-		sme_err("Invalid Session");
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+			 "Invalid Session");
 		return;
 	}
-
-	req = qdf_mem_malloc(sizeof(*req));
-	if (!req)
-		return;
-
-	req->vdev_id = timer_info->vdev_id;
-	wma_msg.type = WMA_ROAM_SYNC_TIMEOUT;
-	wma_msg.bodyptr = req;
-
-	status = cds_mq_post_message(QDF_MODULE_ID_WMA, &wma_msg);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		sme_err("Post roam offload timer fails, session id: %d",
-			timer_info->vdev_id);
-		qdf_mem_free(req);
-		return;
-	}
+	csr_roam_disconnect(timer_info->pMac, timer_info->sessionId,
+			eCSR_DISCONNECT_REASON_UNSPECIFIED);
 }
 
-QDF_STATUS csr_roam_start_roaming_timer(tpAniSirGlobal pMac,
-					uint32_t vdev_id,
+QDF_STATUS csr_roam_start_roaming_timer(tpAniSirGlobal pMac, uint32_t sessionId,
 					uint32_t interval)
 {
 	QDF_STATUS status;
-	tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, vdev_id);
+	tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, sessionId);
 
 	if (!pSession) {
-		sme_err("session %d not found", vdev_id);
+		sme_err("session %d not found", sessionId);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	sme_debug("csrScanStartRoamingTimer");
-	pSession->roamingTimerInfo.vdev_id = (uint8_t) vdev_id;
+	pSession->roamingTimerInfo.sessionId = (uint8_t) sessionId;
 	status = qdf_mc_timer_start(&pSession->hTimerRoaming,
 				    interval / QDF_MC_TIMER_TO_MS_UNIT);
 
 	return status;
 }
 
-QDF_STATUS csr_roam_stop_roaming_timer(tpAniSirGlobal pMac,
-				       uint32_t vdev_id)
+QDF_STATUS csr_roam_stop_roaming_timer(tpAniSirGlobal pMac, uint32_t sessionId)
 {
 	return qdf_mc_timer_stop
-			(&pMac->roam.roamSession[vdev_id].hTimerRoaming);
+			(&pMac->roam.roamSession[sessionId].hTimerRoaming);
 }
 
 void csr_roam_wait_for_key_time_out_handler(void *pv)
 {
 	tCsrTimerInfo *pInfo = (tCsrTimerInfo *) pv;
 	tpAniSirGlobal pMac = pInfo->pMac;
-	tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, pInfo->vdev_id);
+	tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, pInfo->sessionId);
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 
 	if (pSession == NULL) {
@@ -13057,21 +13035,21 @@ void csr_roam_wait_for_key_time_out_handler(void *pv)
 
 	sme_debug("WaitForKey timer expired in state: %s sub-state: %s",
 		mac_trace_get_neighbour_roam_state(pMac->roam.
-					neighborRoamInfo[pInfo->vdev_id].
+					neighborRoamInfo[pInfo->sessionId].
 						   neighborRoamState),
 		mac_trace_getcsr_roam_sub_state(pMac->roam.
-						curSubState[pInfo->vdev_id]));
+						curSubState[pInfo->sessionId]));
 
 	spin_lock(&pMac->roam.roam_state_lock);
-	if (CSR_IS_WAIT_FOR_KEY(pMac, pInfo->vdev_id)) {
+	if (CSR_IS_WAIT_FOR_KEY(pMac, pInfo->sessionId)) {
 		/* Change the substate so command queue is unblocked. */
-		if (CSR_ROAM_SESSION_MAX > pInfo->vdev_id)
-			pMac->roam.curSubState[pInfo->vdev_id] =
+		if (CSR_ROAM_SESSION_MAX > pInfo->sessionId)
+			pMac->roam.curSubState[pInfo->sessionId] =
 						eCSR_ROAM_SUBSTATE_NONE;
 		spin_unlock(&pMac->roam.roam_state_lock);
 
 		if (csr_neighbor_roam_is_handoff_in_progress(pMac,
-						pInfo->vdev_id)) {
+						pInfo->sessionId)) {
 			/*
 			 * Enable heartbeat timer when hand-off is in progress
 			 * and Key Wait timer expired.
@@ -13083,13 +13061,13 @@ void csr_roam_wait_for_key_time_out_handler(void *pv)
 		}
 		sme_debug("SME pre-auth state timeout");
 
-		if (csr_is_conn_state_connected_infra(pMac, pInfo->vdev_id)) {
+		if (csr_is_conn_state_connected_infra(pMac, pInfo->sessionId)) {
 			csr_roam_link_up(pMac,
 					 pSession->connectedProfile.bssid);
 			sme_process_pending_queue(pMac);
 			status = sme_acquire_global_lock(&pMac->sme);
 			if (QDF_IS_STATUS_SUCCESS(status)) {
-				csr_roam_disconnect(pMac, pInfo->vdev_id,
+				csr_roam_disconnect(pMac, pInfo->sessionId,
 					eCSR_DISCONNECT_REASON_UNSPECIFIED);
 				sme_release_global_lock(&pMac->sme);
 			}
@@ -13113,17 +13091,16 @@ void csr_roam_wait_for_key_time_out_handler(void *pv)
  * Return: None
  */
 void csr_roam_roaming_offload_timer_action(tpAniSirGlobal mac_ctx,
-		uint32_t interval, uint8_t vdev_id,
+		uint32_t interval, uint8_t session_id,
 		uint8_t action)
 {
-	tCsrRoamSession *csr_session = CSR_GET_SESSION(mac_ctx, vdev_id);
-	QDF_TIMER_STATE tstate;
+	tCsrRoamSession *csr_session = CSR_GET_SESSION(mac_ctx, session_id);
 
 	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			("LFR3: timer action %d, vdev_id %d, intvl %d"),
-			action, vdev_id, interval);
+			("LFR3: timer action %d, session %d, intvl %d"),
+			action, session_id, interval);
 	if (mac_ctx) {
-		csr_session = CSR_GET_SESSION(mac_ctx, vdev_id);
+		csr_session = CSR_GET_SESSION(mac_ctx, session_id);
 	} else {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 				("LFR3: Invalid MAC Context"));
@@ -13131,25 +13108,13 @@ void csr_roam_roaming_offload_timer_action(tpAniSirGlobal mac_ctx,
 	}
 	if (!csr_session) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-				("LFR3: session %d not found"), vdev_id);
+				("LFR3: session %d not found"), session_id);
 		return;
 	}
-	csr_session->roamingTimerInfo.vdev_id = (uint8_t) vdev_id;
-
-	tstate =
-	   qdf_mc_timer_get_current_state(&csr_session->roaming_offload_timer);
-
-	if (action == ROAMING_OFFLOAD_TIMER_START) {
-		/*
-		 * If timer is already running then re-start timer in order to
-		 * process new ROAM_START with fresh timer.
-		 */
-		if (tstate == QDF_TIMER_STATE_RUNNING)
-			qdf_mc_timer_stop(&csr_session->roaming_offload_timer);
-	qdf_mc_timer_start(&csr_session->roaming_offload_timer,
-				   interval / QDF_MC_TIMER_TO_MS_UNIT);
-	}
-
+	csr_session->roamingTimerInfo.sessionId = (uint8_t) session_id;
+	if (action == ROAMING_OFFLOAD_TIMER_START)
+		qdf_mc_timer_start(&csr_session->roaming_offload_timer,
+				interval / QDF_MC_TIMER_TO_MS_UNIT);
 	if (action == ROAMING_OFFLOAD_TIMER_STOP)
 		qdf_mc_timer_stop(&csr_session->roaming_offload_timer);
 
@@ -13162,17 +13127,17 @@ static QDF_STATUS csr_roam_start_wait_for_key_timer(tpAniSirGlobal pMac,
 	QDF_STATUS status;
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo =
 		&pMac->roam.neighborRoamInfo[pMac->roam.WaitForKeyTimerInfo.
-					     vdev_id];
+					     sessionId];
 	if (csr_neighbor_roam_is_handoff_in_progress(pMac,
 				     pMac->roam.WaitForKeyTimerInfo.
-				     vdev_id)) {
+				     sessionId)) {
 		/* Disable heartbeat timer when hand-off is in progress */
 		sme_debug("disabling HB timer in state: %s sub-state: %s",
 			mac_trace_get_neighbour_roam_state(
 				pNeighborRoamInfo->neighborRoamState),
 			mac_trace_getcsr_roam_sub_state(
 				pMac->roam.curSubState[pMac->roam.
-					WaitForKeyTimerInfo.vdev_id]));
+					WaitForKeyTimerInfo.sessionId]));
 		cfg_set_int(pMac, WNI_CFG_HEART_BEAT_THRESHOLD, 0);
 	}
 	sme_debug("csrScanStartWaitForKeyTimer");
@@ -13186,7 +13151,7 @@ QDF_STATUS csr_roam_stop_wait_for_key_timer(tpAniSirGlobal pMac)
 {
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo =
 		&pMac->roam.neighborRoamInfo[pMac->roam.WaitForKeyTimerInfo.
-					     vdev_id];
+					     sessionId];
 
 	sme_debug("WaitForKey timer stopped in state: %s sub-state: %s",
 		mac_trace_get_neighbour_roam_state(pNeighborRoamInfo->
@@ -13194,9 +13159,10 @@ QDF_STATUS csr_roam_stop_wait_for_key_timer(tpAniSirGlobal pMac)
 		mac_trace_getcsr_roam_sub_state(pMac->roam.
 						curSubState[pMac->roam.
 							    WaitForKeyTimerInfo.
-							    vdev_id]));
+							    sessionId]));
 	if (csr_neighbor_roam_is_handoff_in_progress(pMac,
-				pMac->roam.WaitForKeyTimerInfo.vdev_id)) {
+					pMac->roam.WaitForKeyTimerInfo.
+						     sessionId)) {
 		/*
 		 * Enable heartbeat timer when hand-off is in progress
 		 * and Key Wait timer got stopped for some reason
@@ -16019,15 +15985,6 @@ QDF_STATUS csr_send_join_req_msg(tpAniSirGlobal pMac, uint32_t sessionId,
 		csr_dump_vendor_ies((uint8_t *)pBssDescription->ieFields,
 				    ieLen);
 
-		is_vendor_ap_present = csr_check_vendor_ap_present(pMac,
-					pBssDescription,
-					ucDot11Mode, pIes, ieLen,
-					WMI_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA);
-		if (is_vendor_ap_present)
-			pMac->follow_ap_edca = true;
-		else
-			pMac->follow_ap_edca = false;
-
 		is_vendor_ap_present = csr_check_vendor_ap_present(
 						pMac, pBssDescription,
 						ucDot11Mode, pIes, ieLen,
@@ -16053,18 +16010,14 @@ QDF_STATUS csr_send_join_req_msg(tpAniSirGlobal pMac, uint32_t sessionId,
 				sme_debug("1x1 with 1 Chain AP");
 		}
 
-		if (is_vendor_ap_present &&
-		    ((pMac->roam.configParam.is_force_1x1 ==
-		    FORCE_1X1_ENABLED_FOR_AS && pMac->lteCoexAntShare) ||
-		    pMac->roam.configParam.is_force_1x1 ==
-		    FORCE_1X1_ENABLED_FORCED)) {
+		if (pMac->roam.configParam.is_force_1x1 &&
+		    pMac->lteCoexAntShare &&
+		    is_vendor_ap_present) {
 			pSession->supported_nss_1x1 = true;
 			pSession->vdev_nss = 1;
 			pSession->nss = 1;
 			pSession->nss_forced_1x1 = true;
-			sme_debug("For special ap, NSS: %d force 1x1 %d",
-				  pSession->nss,
-				  pMac->roam.configParam.is_force_1x1);
+			sme_debug("For special ap, NSS: %d", pSession->nss);
 		}
 
 		/*
@@ -17757,8 +17710,6 @@ QDF_STATUS csr_process_add_sta_session_command(tpAniSirGlobal pMac,
 			pMac->roam.configParam.tx_aggr_sw_retry_threshold_vi;
 	add_sta_self_req->tx_aggr_sw_retry_threshold_vo =
 			pMac->roam.configParam.tx_aggr_sw_retry_threshold_vo;
-	add_sta_self_req->disable_4way_hs_offload =
-			pMac->roam.configParam.disable_4way_hs_offload;
 	msg.type = WMA_ADD_STA_SELF_REQ;
 	msg.reserved = 0;
 	msg.bodyptr = add_sta_self_req;
@@ -20175,7 +20126,7 @@ static void csr_add_rssi_reject_ap_list(tpAniSirGlobal mac_ctx,
 #define RSO_RESTART_BIT     (1<<ROAM_SCAN_OFFLOAD_RESTART)
 #define RSO_UPDATE_CFG_BIT  (1<<ROAM_SCAN_OFFLOAD_UPDATE_CFG)
 #define RSO_ABORT_SCAN_BIT  (1<<ROAM_SCAN_OFFLOAD_ABORT_SCAN)
-#define RSO_START_ALLOW_MASK   (RSO_START_BIT |RSO_STOP_BIT | RSO_UPDATE_CFG_BIT)
+#define RSO_START_ALLOW_MASK   (RSO_STOP_BIT | RSO_UPDATE_CFG_BIT)
 #define RSO_STOP_ALLOW_MASK    (RSO_UPDATE_CFG_BIT | RSO_RESTART_BIT | \
 		RSO_STOP_BIT | RSO_START_BIT | RSO_ABORT_SCAN_BIT)
 #define RSO_RESTART_ALLOW_MASK (RSO_UPDATE_CFG_BIT | RSO_START_BIT | \
@@ -20462,93 +20413,6 @@ csr_create_per_roam_request(tpAniSirGlobal mac_ctx, uint8_t session_id)
 			  req_buf->per_config.min_candidate_rssi);
 	return req_buf;
 }
-
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-QDF_STATUS csr_fast_reassoc(tHalHandle hal, tCsrRoamProfile *profile,
-			    const tSirMacAddr bssid, int channel,
-			    uint8_t vdev_id, const tSirMacAddr connected_bssid)
-{
-	QDF_STATUS status;
-	struct wma_roam_invoke_cmd *fastreassoc;
-	cds_msg_t msg = {0};
-	tpAniSirGlobal mac_ctx = PMAC_STRUCT(hal);
-	tCsrRoamSession *session;
-
-	session = CSR_GET_SESSION(mac_ctx, vdev_id);
-	if (!session || !session->pCurRoamProfile) {
-		sme_err("session %d not found", vdev_id);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (!csr_is_conn_state_connected(mac_ctx, vdev_id)) {
-		sme_debug("Not in connected state, Roam Invoke not sent");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (session->pCurRoamProfile->driver_disabled_roaming) {
-		sme_debug("roaming status in driver %d",
-			  session->pCurRoamProfile->driver_disabled_roaming);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	fastreassoc = qdf_mem_malloc(sizeof(*fastreassoc));
-	if (NULL == fastreassoc) {
-		sme_err("qdf_mem_malloc failed for fastreassoc");
-		return QDF_STATUS_E_NOMEM;
-	}
-	/* if both are same then set the flag */
-	if (!qdf_mem_cmp(connected_bssid, bssid, ETH_ALEN)) {
-		fastreassoc->is_same_bssid = true;
-		sme_debug("bssid same, bssid[%pM]", bssid);
-	}
-	fastreassoc->vdev_id = vdev_id;
-	fastreassoc->bssid[0] = bssid[0];
-	fastreassoc->bssid[1] = bssid[1];
-	fastreassoc->bssid[2] = bssid[2];
-	fastreassoc->bssid[3] = bssid[3];
-	fastreassoc->bssid[4] = bssid[4];
-	fastreassoc->bssid[5] = bssid[5];
-
-	status = sme_get_beacon_frm(hal, profile, bssid,
-				    &fastreassoc->frame_buf,
-				    &fastreassoc->frame_len,
-				    &channel);
-
-	if (!channel) {
-		sme_err("channel retrieval from BSS desc fails!");
-		qdf_mem_free(fastreassoc);
-		return QDF_STATUS_E_FAULT;
-	}
-
-	fastreassoc->channel = channel;
-	if (QDF_STATUS_SUCCESS != status) {
-		sme_warn("sme_get_beacon_frm failed");
-		fastreassoc->frame_buf = NULL;
-		fastreassoc->frame_len = 0;
-	}
-
-	if (csr_is_auth_type_ese(mac_ctx->roam.roamSession[vdev_id].
-				 connectedProfile.AuthType)) {
-		sme_debug("Beacon is not required for ESE");
-		if (fastreassoc->frame_len) {
-			qdf_mem_free(fastreassoc->frame_buf);
-			fastreassoc->frame_buf = NULL;
-			fastreassoc->frame_len = 0;
-		}
-	}
-
-	msg.type = eWNI_SME_ROAM_INVOKE;
-	msg.reserved = 0;
-	msg.bodyptr = fastreassoc;
-	status = cds_mq_post_message(QDF_MODULE_ID_PE, &msg);
-	if (QDF_STATUS_SUCCESS != status) {
-		sme_err("Not able to post ROAM_INVOKE_CMD message to PE");
-		qdf_mem_free(fastreassoc);
-	}
-
-	return status;
-}
-#endif
 
 /**
  * csr_roam_offload_per_scan() - populates roam offload scan request and sends
@@ -20863,12 +20727,6 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 	    (session_id != temp_session_id)) {
 		sme_debug("Roam cmd not for session %d on which roaming is enabled",
 			   temp_session_id);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (!csr_is_conn_state_connected(mac_ctx, session_id) &&
-	    command == ROAM_SCAN_OFFLOAD_UPDATE_CFG) {
-		sme_debug("Session not in connected state, RSO not sent");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -22872,8 +22730,6 @@ static QDF_STATUS csr_process_roam_sync_callback(tpAniSirGlobal mac_ctx,
 	tSirSmeHTProfile *src_profile = NULL;
 	tCsrRoamHTProfile *dst_profile = NULL;
 #endif
-	tpCsrNeighborRoamControlInfo neigh_roam_info =
-				&mac_ctx->roam.neighborRoamInfo[session_id];
 
 	if (!session) {
 		sme_err("LFR3: Session not found");
@@ -22890,7 +22746,6 @@ static QDF_STATUS csr_process_roam_sync_callback(tpAniSirGlobal mac_ctx,
 		csr_roam_roaming_offload_timer_action(mac_ctx,
 				0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
 		if (session->discon_in_progress ||
-		    neigh_roam_info->last_sent_cmd == ROAM_SCAN_OFFLOAD_STOP ||
 		    !CSR_IS_ROAM_JOINED(mac_ctx, session_id)) {
 			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 				FL("LFR3: Session not in connected state or disconnect is in progress %d"),
@@ -22962,11 +22817,9 @@ static QDF_STATUS csr_process_roam_sync_callback(tpAniSirGlobal mac_ctx,
 			session->disable_hi_rssi = false;
 		}
 
-		if (roam_synch_data->authStatus ==
-		    CSR_ROAM_AUTH_STATUS_AUTHENTICATED)
-			csr_roam_offload_scan(mac_ctx, session_id,
-					      ROAM_SCAN_OFFLOAD_UPDATE_CFG,
-					      REASON_CONNECT);
+		csr_roam_offload_scan(mac_ctx, session_id,
+				ROAM_SCAN_OFFLOAD_UPDATE_CFG,
+				REASON_CONNECT);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
 				       eCSR_ROAM_SYNCH_COMPLETE,
 				       eCSR_ROAM_RESULT_SUCCESS);
@@ -23078,7 +22931,7 @@ static QDF_STATUS csr_process_roam_sync_callback(tpAniSirGlobal mac_ctx,
 				session_id);
 
 		ps_global_info->remain_in_power_active_till_dhcp = true;
-		mac_ctx->roam.WaitForKeyTimerInfo.vdev_id = session_id;
+		mac_ctx->roam.WaitForKeyTimerInfo.sessionId = session_id;
 		if (!QDF_IS_STATUS_SUCCESS(csr_roam_start_wait_for_key_timer(
 				mac_ctx, CSR_WAIT_FOR_KEY_TIMEOUT_PERIOD))
 		   ) {
@@ -23087,8 +22940,6 @@ static QDF_STATUS csr_process_roam_sync_callback(tpAniSirGlobal mac_ctx,
 					eCSR_ROAM_SUBSTATE_NONE,
 					session_id);
 		}
-		csr_neighbor_roam_state_transition(mac_ctx,
-				eCSR_NEIGHBOR_ROAM_STATE_INIT, session_id);
 	}
 	roam_info->nBeaconLength = 0;
 	roam_info->nAssocReqLength = roam_synch_data->reassoc_req_length -
@@ -23306,71 +23157,4 @@ QDF_STATUS csr_roam_synch_callback(tpAniSirGlobal mac_ctx,
 
 	return status;
 }
-
-#ifdef WLAN_FEATURE_FIPS
-QDF_STATUS
-csr_process_roam_pmkid_req_callback(tpAniSirGlobal mac_ctx,
-				    uint8_t vdev_id,
-				    struct roam_pmkid_req_event *src_lst)
-{
-	tCsrRoamInfo *roam_info;
-	tCsrRoamSession *session = CSR_GET_SESSION(mac_ctx, vdev_id);
-	struct qdf_mac_addr *dst_list;
-	QDF_STATUS status;
-	uint32_t num_entries, i;
-
-	if (!session)
-		return QDF_STATUS_E_NULL_VALUE;
-
-	roam_info = qdf_mem_malloc(sizeof(tCsrRoamInfo));
-	if (!roam_info)
-		return QDF_STATUS_E_NOMEM;
-
-	num_entries = src_lst->num_entries;
-	for (i = 0; i < num_entries; i++) {
-		dst_list = &src_lst->ap_bssid[i];
-		qdf_mem_copy(&roam_info->bssid, dst_list,
-			     sizeof(struct qdf_mac_addr));
-
-		status = csr_roam_call_callback(mac_ctx, vdev_id, roam_info,
-						0, eCSR_ROAM_FIPS_PMK_REQUEST,
-						eCSR_ROAM_RESULT_NONE);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			sme_err("%s: Trigger pmkid fallback failed", __func__);
-			qdf_mem_free(roam_info);
-			return status;
-		}
-	}
-	qdf_mem_free(roam_info);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS
-csr_roam_pmkid_req_callback(uint8_t vdev_id,
-			    struct roam_pmkid_req_event *src_lst)
-{
-	QDF_STATUS status;
-	tpAniSirGlobal mac_ctx;
-
-	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
-	if (!mac_ctx) {
-		WMA_LOGE("%s: NULL mac ptr", __func__);
-		QDF_ASSERT(0);
-		return -EINVAL;
-	}
-
-	status = sme_acquire_global_lock(&mac_ctx->sme);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		sme_err("%s: Locking failed, bailing out", __func__);
-		return status;
-	}
-
-	status = csr_process_roam_pmkid_req_callback(mac_ctx, vdev_id,
-						     src_lst);
-	sme_release_global_lock(&mac_ctx->sme);
-
-	return status;
-}
-#endif /* WLAN_FEATURE_FIPS */
 #endif

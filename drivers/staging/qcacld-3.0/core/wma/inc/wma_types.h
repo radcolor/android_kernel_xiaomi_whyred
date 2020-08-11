@@ -220,7 +220,7 @@
 #define WMA_WOW_ADD_PTRN               SIR_HAL_WOW_ADD_PTRN
 #define WMA_WOW_DEL_PTRN               SIR_HAL_WOW_DEL_PTRN
 #define WMA_WOWL_ENTER_REQ             SIR_HAL_WOWL_ENTER_REQ
-#define WMA_ROAM_SYNC_TIMEOUT          SIR_HAL_WMA_ROAM_SYNC_TIMEOUT
+#define WMA_WOWL_ENTER_RSP             SIR_HAL_WOWL_ENTER_RSP
 #define WMA_WOWL_EXIT_REQ              SIR_HAL_WOWL_EXIT_REQ
 #define WMA_WOWL_EXIT_RSP              SIR_HAL_WOWL_EXIT_RSP
 /* / PE <-> HAL statistics messages */
@@ -790,9 +790,7 @@ QDF_STATUS wma_register_roaming_callbacks(void *cds_ctx,
 		QDF_STATUS (*pe_roam_synch_cb)(tpAniSirGlobal mac,
 			roam_offload_synch_ind *roam_synch_data,
 			tpSirBssDescription  bss_desc_ptr,
-			enum sir_roam_op_code reason),
-		QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
-			struct roam_pmkid_req_event *bss_list));
+			enum sir_roam_op_code reason));
 #else
 static inline QDF_STATUS wma_register_roaming_callbacks(void *cds_ctx,
 		QDF_STATUS (*csr_roam_synch_cb)(tpAniSirGlobal mac,
@@ -802,9 +800,7 @@ static inline QDF_STATUS wma_register_roaming_callbacks(void *cds_ctx,
 		QDF_STATUS (*pe_roam_synch_cb)(tpAniSirGlobal mac,
 			roam_offload_synch_ind *roam_synch_data,
 			tpSirBssDescription  bss_desc_ptr,
-			enum sir_roam_op_code reason),
-		QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
-			struct roam_pmkid_req_event *bss_list))
+			enum sir_roam_op_code reason))
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }

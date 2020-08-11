@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -114,8 +114,6 @@ enum dpt_set_param_debugfs {
 	qdf_atomic_inc(&peer->ref_cnt)
 #define OL_TXRX_PEER_DEC_REF_CNT_SILENT(peer) \
 	qdf_atomic_dec(&peer->ref_cnt)
-
-#define NORMALIZED_TO_NOISE_FLOOR (-96)
 
 ol_txrx_peer_handle
 ol_txrx_peer_find_by_local_id_inc_ref(struct ol_txrx_pdev_t *pdev,
@@ -3816,8 +3814,11 @@ ol_txrx_clear_peer_internal(struct ol_txrx_peer_t *peer)
 {
 	p_cds_sched_context sched_ctx = get_cds_sched_ctxt();
 	/* Drop pending Rx frames in CDS */
-	if (sched_ctx)
+	if (sched_ctx) {
 		cds_drop_rxpkt_by_staid(sched_ctx, peer->local_id);
+		if (cds_get_pktcap_mode_enable())
+			cds_drop_monpkt(sched_ctx);
+	}
 
 	/* Purge the cached rx frame queue */
 	ol_txrx_flush_rx_frames(peer, 1);
@@ -5467,57 +5468,20 @@ static inline int ol_txrx_drop_nbuf_list(qdf_nbuf_t buf_list)
 }
 
 /**
- * ol_txrx_mon() - Wrapper function to invoke mon cb
- * @data_rx: mon callback function
- * @msdu: mon packet
- * @pdev: handle to the physical device
- * @chan: monitor channel
- *
- * Return: None
- */
-static void ol_txrx_mon(ol_txrx_mon_callback_fp data_rx, qdf_nbuf_t msdu,
-			struct ol_txrx_pdev_t *pdev, uint16_t chan)
-{
-	struct radiotap_header *rthdr;
-	struct ieee80211_hdr_3addr *hdr;
-	void *mon_osif_dev = pdev->mon_osif_dev;
-
-	rthdr = (struct radiotap_header *)qdf_nbuf_data(msdu);
-	hdr = (struct ieee80211_hdr_3addr *)(qdf_nbuf_data(msdu) +
-			rthdr->it_len);
-
-	if (ieee80211_is_qos_nullfunc(hdr->frame_control)) {
-		qdf_nbuf_free(msdu);
-		return;
-	}
-
-	if (ieee80211_is_assoc_resp(hdr->frame_control) ||
-	    ieee80211_is_reassoc_resp(hdr->frame_control)) {
-		ol_htt_mon_note_chan(pdev, chan);
-	}
-
-	if (data_rx(mon_osif_dev, msdu) != QDF_STATUS_SUCCESS) {
-		ol_txrx_err("Frame Rx to HDD failed");
-		qdf_nbuf_free(msdu);
-	}
-}
-
-/**
  * ol_txrx_mon_mgmt_cb(): callback to process management packets
  * for pkt capture mode
  * @ppdev: device handler
  * @nbuf_list: netbuf list
  * @vdev_id: vdev id for which packet is captured
  * @tid:  tid number
- * @pkt_tx_status: Tx status
+ * @status: Tx status
  * @pktformat: Frame format
  *
  * Return: none
  */
 static void
 ol_txrx_mon_mgmt_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
-		    uint8_t tid, struct ol_mon_tx_status pkt_tx_status,
-		    bool pkt_format)
+		    uint8_t tid, uint8_t status, bool pkt_format)
 {
 	struct ol_txrx_pdev_t *pdev = (struct ol_txrx_pdev_t *)ppdev;
 	uint8_t drop_count;
@@ -5539,7 +5503,10 @@ ol_txrx_mon_mgmt_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 	while (msdu) {
 		next_buf = qdf_nbuf_queue_next(msdu);
 		qdf_nbuf_set_next(msdu, NULL);   /* Add NULL terminator */
-		ol_txrx_mon(data_rx, msdu, pdev, pkt_tx_status.chan_num);
+		if (QDF_STATUS_SUCCESS != data_rx(mon_osif_dev, msdu)) {
+			ol_txrx_err("Frame Rx to HDD failed");
+			qdf_nbuf_free(msdu);
+		}
 		msdu = next_buf;
 	}
 
@@ -5565,7 +5532,6 @@ bool ol_txrx_mon_mgmt_process(struct mon_rx_status *txrx_status,
 	struct cds_ol_mon_pkt *pkt;
 	ol_txrx_pdev_handle pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	p_cds_sched_context sched_ctx = get_cds_sched_ctxt();
-	struct ol_mon_tx_status pkt_tx_status = {0};
 
 	if (unlikely(!sched_ctx))
 		return false;
@@ -5581,7 +5547,6 @@ bool ol_txrx_mon_mgmt_process(struct mon_rx_status *txrx_status,
 	headroom = qdf_nbuf_headroom(nbuf);
 	qdf_nbuf_push_head(nbuf, headroom);
 	qdf_nbuf_update_radiotap(txrx_status, nbuf, headroom);
-	pkt_tx_status.chan_num = txrx_status->chan_num;
 
 	pkt = cds_alloc_ol_mon_pkt(sched_ctx);
 	if (!pkt)
@@ -5592,7 +5557,7 @@ bool ol_txrx_mon_mgmt_process(struct mon_rx_status *txrx_status,
 	pkt->monpkt = (void *)nbuf;
 	pkt->vdev_id = HTT_INVALID_VDEV;
 	pkt->tid = HTT_INVALID_TID;
-	pkt->pkt_tx_status = pkt_tx_status;
+	pkt->status = status;
 	pkt->pkt_format = TXRX_PKT_FORMAT_80211;
 	cds_indicate_monpkt(sched_ctx, pkt);
 
@@ -5894,14 +5859,7 @@ ol_txrx_update_tx_status(struct ol_txrx_pdev_t *pdev,
 		IEEE80211_CHAN_2GHZ : IEEE80211_CHAN_5GHZ);
 
 	tx_status->chan_flags = channel_flags;
-	/* RSSI is filled with TPC which will be normalized
-	 * during radiotap updation, so add 96 here
-	 */
-	tx_status->ant_signal_db =
-				mon_hdr->rssi_comb - NORMALIZED_TO_NOISE_FLOOR;
-	tx_status->tx_status = mon_hdr->status;
-	tx_status->add_rtap_ext = true;
-	tx_status->tx_retry_cnt = mon_hdr->tx_retry_cnt;
+	tx_status->ant_signal_db = mon_hdr->rssi_comb;
 }
 
 /**
@@ -5911,15 +5869,14 @@ ol_txrx_update_tx_status(struct ol_txrx_pdev_t *pdev,
  * @nbuf_list: netbuf list
  * @vdev_id: vdev id for which packet is captured
  * @tid:  tid number
- * @pkt_tx_status: Tx status
+ * @status: Tx status
  * @pktformat: Frame format
  *
  * Return: none
  */
 static void
 ol_txrx_mon_tx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
-		       uint8_t tid, struct ol_mon_tx_status pkt_tx_status,
-		       bool pkt_format)
+		       uint8_t tid, uint8_t status, bool pkt_format)
 {
 	struct ol_txrx_pdev_t *pdev = (struct ol_txrx_pdev_t *)ppdev;
 	qdf_nbuf_t msdu, next_buf;
@@ -5991,8 +5948,6 @@ ol_txrx_mon_tx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 		mon_hdr.sgi = cmpl_desc->sgi;
 		mon_hdr.ldpc = cmpl_desc->ldpc;
 		mon_hdr.beamformed = cmpl_desc->beamformed;
-		mon_hdr.status = pkt_tx_status.status;
-		mon_hdr.tx_retry_cnt = pkt_tx_status.tx_retry_cnt;
 
 		qdf_nbuf_pull_head(
 			msdu,
@@ -6077,11 +6032,8 @@ ol_txrx_mon_tx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 		/*
 		 * Get the channel info and update the rx status
 		 */
-		if (vdev_id != HTT_INVALID_VDEV &&
-		    (!pdev->htt_pdev->mon_ch_info.ch_num)) {
-			cds_get_chan_by_session_id(vdev_id, &chan);
-			ol_htt_mon_note_chan(pdev, chan);
-		}
+		cds_get_chan_by_session_id(vdev_id, &chan);
+		ol_htt_mon_note_chan(pdev, chan);
 
 		ol_txrx_update_tx_status(pdev, &tx_status, &mon_hdr);
 
@@ -6092,10 +6044,14 @@ ol_txrx_mon_tx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 		headroom = qdf_nbuf_headroom(msdu);
 		qdf_nbuf_push_head(msdu, headroom);
 		qdf_nbuf_update_radiotap(&tx_status, msdu, headroom);
-		ol_txrx_mon(data_rx, msdu, pdev, 0);
+
+		if (QDF_STATUS_SUCCESS != data_rx(mon_osif_dev, msdu)) {
+			ol_txrx_err("Frame Tx to HDD failed");
+			qdf_nbuf_free(msdu);
+		}
+
 		msdu = next_buf;
 	}
-
 	return;
 
 free_buf:
@@ -6109,15 +6065,14 @@ free_buf:
  * @nbuf_list: netbuf list
  * @vdev_id: vdev id for which packet is captured
  * @tid:  tid number
- * @pkt_tx_status: Tx status
+ * @status: Tx status
  * @pktformat: Frame format
  *
  * Return: none
  */
 static void
 ol_txrx_mon_rx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
-		       uint8_t tid, struct ol_mon_tx_status pkt_tx_status,
-		       bool pkt_format)
+		       uint8_t tid, uint8_t status, bool pkt_format)
 {
 	struct ol_txrx_pdev_t *pdev = (struct ol_txrx_pdev_t *)ppdev;
 	qdf_nbuf_t buf_list = (qdf_nbuf_t)nbuf_list;
@@ -6202,16 +6157,9 @@ ol_txrx_mon_rx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 		/*
 		 * Get the channel info and update the rx status
 		 */
-		if (vdev_id != HTT_INVALID_VDEV &&
-		    (!pdev->htt_pdev->mon_ch_info.ch_num)) {
-			cds_get_chan_by_session_id(vdev_id, &chan);
-			ol_htt_mon_note_chan(pdev, chan);
-		}
+		cds_get_chan_by_session_id(vdev_id, &chan);
+		ol_htt_mon_note_chan(pdev, chan);
 		htt_rx_mon_get_rx_status(pdev->htt_pdev, rx_desc, &rx_status);
-
-		rx_status.tx_status = pkt_tx_status.status;
-		rx_status.add_rtap_ext = true;
-		rx_status.tx_retry_cnt = pkt_tx_status.tx_retry_cnt;
 
 		/* clear IEEE80211_RADIOTAP_F_FCS flag*/
 		rx_status.rtap_flags &= ~(BIT(4));
@@ -6235,7 +6183,11 @@ ol_txrx_mon_rx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 		headroom = qdf_nbuf_headroom(msdu);
 		qdf_nbuf_push_head(msdu, headroom);
 		qdf_nbuf_update_radiotap(&rx_status, msdu, headroom);
-		ol_txrx_mon(data_rx, msdu, pdev, 0);
+
+		if (QDF_STATUS_SUCCESS != data_rx(mon_osif_dev, msdu)) {
+			ol_txrx_err("Frame Rx to HDD failed");
+			qdf_nbuf_free(msdu);
+		}
 		msdu = next_buf;
 	}
 
@@ -6245,50 +6197,16 @@ free_buf:
 	drop_count = ol_txrx_drop_nbuf_list(buf_list);
 }
 
-/**
- * ol_txrx_pktcapture_status_map() - map Tx status for data packets
- * with packet capture Tx status
- * @status: Tx status
- *
- * Return: pktcapture_tx_status enum
- */
-static enum pktcapture_tx_status
-ol_txrx_pktcapture_status_map(uint8_t status)
-{
-	enum pktcapture_tx_status tx_status;
-
-	switch (status) {
-	case htt_tx_status_ok:
-		tx_status = pktcapture_tx_status_ok;
-		break;
-	case htt_tx_status_discard:
-		tx_status = pktcapture_tx_status_discard;
-		break;
-	case htt_tx_status_no_ack:
-		tx_status = pktcapture_tx_status_no_ack;
-		break;
-	default:
-		tx_status = pktcapture_tx_status_discard;
-		break;
-	}
-
-	return tx_status;
-}
-
 void ol_txrx_mon_data_process(uint8_t vdev_id,
 			      qdf_nbuf_t mon_buf_list,
 			      enum mon_data_process_type type,
-			      uint8_t tid,
-			      struct ol_mon_tx_status pkt_tx_status,
-			      bool pkt_format)
+			      uint8_t tid, uint8_t status, bool pkt_format)
 {
 	uint8_t drop_count;
 	struct cds_ol_mon_pkt *pkt;
 	ol_txrx_pdev_handle pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	p_cds_sched_context sched_ctx = get_cds_sched_ctxt();
 	cds_ol_mon_thread_cb callback = NULL;
-	pkt_tx_status.status =
-		ol_txrx_pktcapture_status_map(pkt_tx_status.status);
 
 	if (!pdev) {
 		ol_txrx_err("pdev is NULL");
@@ -6318,7 +6236,7 @@ void ol_txrx_mon_data_process(uint8_t vdev_id,
 	pkt->monpkt = (void *)mon_buf_list;
 	pkt->vdev_id = vdev_id;
 	pkt->tid = tid;
-	pkt->pkt_tx_status = pkt_tx_status;
+	pkt->status = status;
 	pkt->pkt_format = pkt_format;
 	cds_indicate_monpkt(sched_ctx, pkt);
 	return;
