@@ -3270,6 +3270,20 @@ int wma_stats_event_handler(void *handle, uint8_t *cmd_param_info,
 	event = param_buf->fixed_param;
 	temp = (uint8_t *) param_buf->data;
 
+	buf_len = event->num_pdev_stats * sizeof(wmi_pdev_stats) +
+		event->num_vdev_stats * sizeof(wmi_vdev_stats) +
+		event->num_peer_stats * sizeof(wmi_peer_stats) +
+		event->num_bcnflt_stats * sizeof(wmi_bcnfilter_stats_t) +
+		event->num_chan_stats * sizeof(wmi_chan_stats) +
+		event->num_mib_stats * sizeof(wmi_mib_stats) +
+		event->num_bcn_stats * sizeof(wmi_bcn_stats) +
+		event->num_peer_extd_stats * sizeof(wmi_peer_extd_stats);
+
+	if (buf_len != param_buf->num_data) {
+		WMA_LOGE("Invalid Buffer len %d received, Expected %d",
+			 buf_len, param_buf->num_data);
+		return -EINVAL;
+	}
 
 	do {
 		if (event->num_pdev_stats > ((WMI_SVC_MSG_MAX_SIZE -
@@ -3296,14 +3310,6 @@ int wma_stats_event_handler(void *handle, uint8_t *cmd_param_info,
 			buf_len += event->num_peer_stats * sizeof(*peer_stats);
 		}
 
-		if (buf_len > param_buf->num_data) {
-			WMA_LOGE("%s: num_data: %d Invalid num_pdev_stats:%d or num_vdev_stats:%d or num_peer_stats:%d",
-				__func__, param_buf->num_data,
-				event->num_pdev_stats,
-				event->num_vdev_stats, event->num_peer_stats);
-			return -EINVAL;
-		}
-
 		rssi_event =
 			(wmi_per_chain_rssi_stats *) param_buf->chain_stats;
 		if (rssi_event) {
@@ -3324,6 +3330,7 @@ int wma_stats_event_handler(void *handle, uint8_t *cmd_param_info,
 		WMA_LOGE("excess wmi buffer: stats pdev %d vdev %d peer %d",
 			 event->num_pdev_stats, event->num_vdev_stats,
 			 event->num_peer_stats);
+		QDF_ASSERT(0);
 		return -EINVAL;
 	}
 
@@ -6419,9 +6426,6 @@ void wma_set_sta_wow_bitmask(uint32_t *bitmask, uint32_t wow_bitmap_size)
 	wma_set_wow_event_bitmap(WOW_TDLS_CONN_TRACKER_EVENT,
 			     WMI_WOW_MAX_EVENT_BM_LEN,
 			     bitmask);
-	wma_set_wow_event_bitmap(WOW_ROAM_PMKID_REQUEST_EVENT,
-				 WMI_WOW_MAX_EVENT_BM_LEN,
-				 bitmask);
 	/* Add further STA wakeup events above this line. */
 }
 
@@ -6575,35 +6579,5 @@ QDF_STATUS wma_get_roam_scan_stats(WMA_HANDLE handle,
 	WMA_LOGD("%s: Exit", __func__);
 
 	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * wma_mgmt_pktcapture_status_map() - map Tx status for MGMT packets
- * with packet capture Tx status
- * @status: Tx status
- *
- * Return: pktcapture_tx_status enum
- */
-enum pktcapture_tx_status
-wma_mgmt_pktcapture_status_map(uint8_t status)
-{
-	enum pktcapture_tx_status tx_status;
-
-	switch (status) {
-	case WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK:
-		tx_status = pktcapture_tx_status_ok;
-		break;
-	case WMI_MGMT_TX_COMP_TYPE_DISCARD:
-		tx_status = pktcapture_tx_status_discard;
-		break;
-	case WMI_MGMT_TX_COMP_TYPE_COMPLETE_NO_ACK:
-		tx_status = pktcapture_tx_status_no_ack;
-		break;
-	default:
-		tx_status = pktcapture_tx_status_discard;
-		break;
-	}
-
-	return tx_status;
 }
 

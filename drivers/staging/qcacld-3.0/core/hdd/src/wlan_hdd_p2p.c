@@ -804,7 +804,7 @@ QDF_STATUS wlan_hdd_remain_on_channel_callback(tHalHandle hHal, void *pCtx,
 	 */
 	/* If ssr is inprogress, do not schedule next roc req */
 	if (!hdd_ctx->is_ssr_in_progress)
-		queue_delayed_work(system_power_efficient_wq, &hdd_ctx->roc_req_work, 0);
+		schedule_delayed_work(&hdd_ctx->roc_req_work, 0);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1541,7 +1541,7 @@ static int wlan_hdd_request_remain_on_channel(struct wiphy *wiphy,
 						HDD_P2P_MAX_ROC_DURATION;
 
 			wlan_hdd_roc_request_enqueue(pAdapter, pRemainChanCtx);
-			queue_delayed_work(system_power_efficient_wq, &pHddCtx->roc_req_work,
+			schedule_delayed_work(&pHddCtx->roc_req_work,
 			msecs_to_jiffies(
 				pHddCtx->config->p2p_listen_defer_interval));
 			hdd_debug("Defer interval is %hu, pAdapter %pK",
@@ -1583,7 +1583,7 @@ static int wlan_hdd_request_remain_on_channel(struct wiphy *wiphy,
 	 */
 	if (isBusy == false && pAdapter->is_roc_inprogress == false) {
 		hdd_debug("scheduling delayed work: no connection/roc active");
-		queue_delayed_work(system_power_efficient_wq, &pHddCtx->roc_req_work, 0);
+		schedule_delayed_work(&pHddCtx->roc_req_work, 0);
 	}
 	return 0;
 }
@@ -2326,7 +2326,7 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 						 msecs_to_jiffies
 							 (WAIT_CHANGE_CHANNEL_FOR_OFFCHANNEL_TX));
 		if (!rc) {
-			hdd_debug("wait on offchannel_tx_event timed out");
+			hdd_err("wait on offchannel_tx_event timed out");
 			goto err_rem_channel;
 		}
 	} else if (offchan) {
@@ -2974,7 +2974,6 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 		}
 	}
 
-	pAdapter = NULL;
 	ret = wlan_hdd_add_monitor_check(pHddCtx, &pAdapter, type, name,
 					 true, name_assign_type);
 	if (ret)

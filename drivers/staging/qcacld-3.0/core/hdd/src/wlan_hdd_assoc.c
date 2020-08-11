@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -54,6 +54,7 @@
 #include <wlan_logging_sock_svc.h>
 #include "wlan_hdd_tsf.h"
 #include "wlan_hdd_scan.h"
+#include "wlan_hdd_main.h"
 
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
@@ -230,7 +231,7 @@ hdd_conn_set_authenticated(hdd_adapter_t *pAdapter, uint8_t authState)
 		qdf_mem_set(auth_time, 0x00, time_buffer_size);
 
 	/* Check is pending ROC request or not when auth state changed */
-	queue_delayed_work(system_power_efficient_wq, &pHddCtx->roc_req_work, 0);
+	schedule_delayed_work(&pHddCtx->roc_req_work, 0);
 }
 
 /**
@@ -268,7 +269,7 @@ void hdd_conn_set_connection_state(hdd_adapter_t *adapter,
 		qdf_mem_set(connect_time, 0x00, time_buffer_size);
 
 	if (conn_state != eConnectionState_NdiConnected)
-		queue_delayed_work(system_power_efficient_wq, &hdd_ctx->roc_req_work, 0);
+		schedule_delayed_work(&hdd_ctx->roc_req_work, 0);
 }
 
 /**
@@ -313,18 +314,6 @@ bool hdd_is_connecting(hdd_station_ctx_t *hdd_sta_ctx)
 {
 	return hdd_sta_ctx->conn_info.connState ==
 		eConnectionState_Connecting;
-}
-
-/**
- * hdd_is_disconnecting() - Function to check disconnection progress
- * @hdd_sta_ctx:    pointer to global HDD Station context
- *
- * Return: true if disconnecting, false otherwise
- */
-bool hdd_is_disconnecting(hdd_station_ctx_t *hdd_sta_ctx)
-{
-	return hdd_sta_ctx->conn_info.connState ==
-		eConnectionState_Disconnecting;
 }
 
 /**
@@ -422,24 +411,6 @@ end:
 		adapter_node = next;
 	}
 	return NULL;
-}
-
-void hdd_abort_ongoing_sta_connection(hdd_context_t *hdd_ctx)
-{
-	hdd_adapter_t *sta_adapter;
-	QDF_STATUS status;
-
-	sta_adapter = hdd_get_sta_connection_in_progress(hdd_ctx);
-	if (sta_adapter) {
-		hdd_debug("Disconnecting STA on vdev: %d",
-			  sta_adapter->sessionId);
-		status = wlan_hdd_disconnect(sta_adapter,
-					     eCSR_DISCONNECT_REASON_DEAUTH);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			hdd_err("wlan_hdd_disconnect failed, status: %d",
-				status);
-		}
-	}
 }
 
 /**
@@ -1103,9 +1074,8 @@ hdd_send_ft_assoc_response(struct net_device *dev,
 	unsigned int len = 0;
 	u8 *pFTAssocRsp = NULL;
 
-	if (pCsrRoamInfo->nAssocRspLength < FT_ASSOC_RSP_IES_OFFSET) {
-		hdd_debug("Invalid assoc rsp length %d",
-			  pCsrRoamInfo->nAssocRspLength);
+	if (pCsrRoamInfo->nAssocRspLength == 0) {
+		hdd_debug("assoc rsp length is 0");
 		return;
 	}
 
@@ -1122,20 +1092,15 @@ hdd_send_ft_assoc_response(struct net_device *dev,
 		   (unsigned int)pFTAssocRsp[0],
 		   (unsigned int)pFTAssocRsp[1]);
 
-	/* Send the Assoc Resp, the supplicant needs this for initial Auth. */
-	len = pCsrRoamInfo->nAssocRspLength - FT_ASSOC_RSP_IES_OFFSET;
-	if (len > IW_GENERIC_IE_MAX) {
-		hdd_err("Invalid Assoc resp length %d", len);
-		return;
-	}
-	wrqu.data.length = len;
-
 	/* We need to send the IEs to the supplicant. */
 	buff = qdf_mem_malloc(IW_GENERIC_IE_MAX);
 	if (buff == NULL) {
 		hdd_err("unable to allocate memory");
 		return;
 	}
+	/* Send the Assoc Resp, the supplicant needs this for initial Auth. */
+	len = pCsrRoamInfo->nAssocRspLength - FT_ASSOC_RSP_IES_OFFSET;
+	wrqu.data.length = len;
 	memcpy(buff, pFTAssocRsp, len);
 	wireless_send_event(dev, IWEVASSOCRESPIE, &wrqu, buff);
 
@@ -1585,13 +1550,6 @@ static void hdd_conn_remove_connect_info(hdd_station_ctx_t *pHddStaCtx)
 	pHddStaCtx->conn_info.proxyARPService = 0;
 
 	qdf_mem_zero(&pHddStaCtx->conn_info.SSID, sizeof(tCsrSSIDInfo));
-
-	/*
-	 * Reset the ptk, gtk status flags to avoid using current connection
-	 * status in further connections.
-	 */
-	pHddStaCtx->conn_info.gtk_installed = false;
-	pHddStaCtx->conn_info.ptk_installed = false;
 }
 
 /**
@@ -1700,15 +1658,6 @@ static QDF_STATUS hdd_dis_connect_handler(hdd_adapter_t *pAdapter,
 		hdd_err("net_dev is released return");
 		return QDF_STATUS_E_FAILURE;
 	}
-
-	if (!pHddCtx) {
-		hdd_err("HDD context is null");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	/* Disable mitigation in FW if STA gets disconnected */
-	hdd_send_thermal_notification(pHddCtx, HDD_THERMAL_STATE_NORMAL);
-
 	/* notify apps that we can't pass traffic anymore */
 	hdd_info("Disabling queues");
 	wlan_hdd_netif_queue_control(pAdapter,
@@ -1879,13 +1828,12 @@ static QDF_STATUS hdd_dis_connect_handler(hdd_adapter_t *pAdapter,
 	 * eConnectionState_Connecting state mean that connection is in
 	 * progress so no need to set state to eConnectionState_NotConnected
 	 */
-	if (eConnectionState_Connecting != pHddStaCtx->conn_info.connState)
+	if ((eConnectionState_Connecting !=
+	    pHddStaCtx->conn_info.connState)) {
 		hdd_conn_set_connection_state(pAdapter,
 					      eConnectionState_NotConnected);
-
-	/* Clear roaming in progress flag */
-	hdd_set_roaming_in_progress(false);
-
+		hdd_set_roaming_in_progress(false);
+	}
 #ifdef WLAN_FEATURE_GTK_OFFLOAD
 	if ((QDF_STA_MODE == pAdapter->device_mode) ||
 	    (QDF_P2P_CLIENT_MODE == pAdapter->device_mode)) {
@@ -2264,9 +2212,8 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 		goto done;
 	}
 
-	if (pCsrRoamInfo->nAssocRspLength < FT_ASSOC_RSP_IES_OFFSET) {
-		hdd_err("Invalid assoc rsp length %d",
-			pCsrRoamInfo->nAssocRspLength);
+	if (pCsrRoamInfo->nAssocRspLength == 0) {
+		hdd_err("Assoc rsp length is 0");
 		goto done;
 	}
 
@@ -2296,10 +2243,6 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 
 	/* Send the Assoc Resp, the supplicant needs this for initial Auth */
 	len = pCsrRoamInfo->nAssocRspLength - FT_ASSOC_RSP_IES_OFFSET;
-	if (len > IW_GENERIC_IE_MAX) {
-		hdd_err("Invalid Assoc resp length %d", len);
-		goto done;
-	}
 	rspRsnLength = len;
 	qdf_mem_copy(rspRsnIe, pFTAssocRsp, len);
 	qdf_mem_zero(rspRsnIe + len, IW_GENERIC_IE_MAX - len);
@@ -2307,10 +2250,10 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 	chan_no = pCsrRoamInfo->pBssDesc->channelId;
 	if (chan_no <= 14)
 		freq = ieee80211_channel_to_frequency(chan_no,
-							NL80211_BAND_2GHZ);
+							 HDD_NL80211_BAND_2GHZ);
 	else
 		freq = ieee80211_channel_to_frequency(chan_no,
-							NL80211_BAND_5GHZ);
+							 HDD_NL80211_BAND_5GHZ);
 	chan = ieee80211_get_channel(pAdapter->wdev.wiphy, freq);
 
 	sme_roam_get_connect_profile(hal_handle, pAdapter->sessionId,
@@ -2667,7 +2610,6 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 	bool hddDisconInProgress = false;
 	unsigned long rc;
 	tSirResultCodes timeout_reason = 0;
-	uint16_t thermal_state = HDD_THERMAL_STATE_NORMAL;
 
 	if (!pHddCtx) {
 		hdd_err("HDD context is NULL");
@@ -2761,13 +2703,6 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 			if (QDF_IS_STATUS_ERROR(qdf_status))
 				hdd_err("Failed to set nth beacon reporting");
 		}
-
-		/* Send the thermal mitigation status to FW */
-		if (pHddCtx->is_thermal_system_registered &&
-		    !pld_get_thermal_state(pHddCtx->parent_dev, &thermal_state))
-			hdd_send_thermal_notification(pHddCtx,
-						      hdd_map_thermal_states(
-						      thermal_state));
 
 		if (cds_is_mcc_in_24G()) {
 			if (pHddCtx->miracast_value)
@@ -5530,17 +5465,13 @@ hdd_sme_roam_callback(void *pContext, tCsrRoamInfo *pRoamInfo, uint32_t roamId,
 		pAdapter->roam_ho_fail = false;
 		pHddStaCtx->ft_carrier_on = false;
 		complete(&pAdapter->roaming_comp_var);
-		queue_delayed_work(system_power_efficient_wq, &pHddCtx->roc_req_work, 0);
+		schedule_delayed_work(&pHddCtx->roc_req_work, 0);
 		break;
 	case eCSR_ROAM_SAE_COMPUTE:
 		if (pRoamInfo)
 			wlan_hdd_sae_callback(pAdapter, pRoamInfo);
 		break;
-	case eCSR_ROAM_FIPS_PMK_REQUEST:
-		/* notify the supplicant of a new candidate */
-		qdf_ret_status = wlan_hdd_cfg80211_pmksa_candidate_notify(
-					pAdapter, pRoamInfo, 1, false);
-		break;
+
 	default:
 		break;
 	}
@@ -6209,10 +6140,6 @@ int hdd_set_csr_auth_type(hdd_adapter_t *pAdapter, eCsrAuthType RSNAuthType)
 					RSNAuthType;
 				hdd_debug("updated profile authtype as %d",
 					RSNAuthType);
-			} else if (RSNAuthType ==  eCSR_AUTH_TYPE_SAE) {
-				/* SAE with open authentication case */
-				pRoamProfile->AuthType.authType[0] =
-					eCSR_AUTH_TYPE_SAE;
 			} else if ((RSNAuthType ==
 				  eCSR_AUTH_TYPE_SUITEB_EAP_SHA256) &&
 				  ((pWextState->

@@ -116,8 +116,6 @@ ifeq ($(KERNEL_BUILD), 0)
 
 	ifeq ($(CONFIG_ARCH_SDM660), y)
 	CONFIG_QCACLD_FEATURE_METERING := y
-	#Flag to enable FIPS
-	CONFIG_WLAN_FEATURE_FIPS := y
 	endif
 
 	ifeq ($(CONFIG_ARCH_SDM630), y)
@@ -246,6 +244,26 @@ endif
 
 endif
 
+
+# As per target team, build is done as follows:
+# Defconfig : build with default flags
+# Slub      : defconfig  + CONFIG_SLUB_DEBUG=y +
+#	      CONFIG_SLUB_DEBUG_ON=y + CONFIG_PAGE_POISONING=y
+# Perf      : Using appropriate msmXXXX-perf_defconfig
+#
+# Shipment builds (user variants) should not have any debug feature
+# enabled. This is identified using 'TARGET_BUILD_VARIANT'. Slub builds
+# are identified using the CONFIG_SLUB_DEBUG_ON configuration. Since
+# there is no other way to identify defconfig builds, QCOMs internal
+# representation of perf builds (identified using the string 'perf'),
+# is used to identify if the build is a slub or defconfig one. This
+# way no critical debug feature will be enabled for perf and shipment
+# builds. Other OEMs are also protected using the TARGET_BUILD_VARIANT
+# config.
+ifneq ($(TARGET_BUILD_VARIANT),user)
+	CONFIG_FEATURE_PKTLOG := y
+endif
+
 #enable spectral scan feature
 CONFIG_WLAN_SPECTRAL_SCAN := y
 
@@ -253,11 +271,10 @@ CONFIG_WLAN_SPECTRAL_SCAN := y
 CONFIG_WLAN_FEATURE_APF := y
 
 #Enable WLAN/Power debugfs feature only if debug_fs is enabled
-ifeq ($(CONFIG_ANDROID), y)
+ifeq ($(CONFIG_DEBUG_FS), y)
        # Flag to enable debugfs. Depends on CONFIG_DEBUG_FS in kernel
        # configuration.
        CONFIG_WLAN_DEBUGFS := y
-	   CFLAGS_wlan_hdd_debugfs.o += -DCONFIG_DEBUG_FS
 
        CONFIG_WLAN_POWER_DEBUGFS := y
 endif
@@ -280,9 +297,6 @@ endif
 #Enable beacon reporting feature
 CONFIG_WLAN_BEACON_REPORTING := y
 
-#Enable/Disable FW thermal mitigation feature
-CONFIG_WLAN_FW_THERMAL_MITIGATION := n
-
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
@@ -292,16 +306,7 @@ BUILD_DEBUG_VERSION := 0
 BUILD_DIAG_VERSION := 1
 
 #Do we panic on bug?  default is to warn
-ifeq ($(CONFIG_SLUB_DEBUG), y)
-	PANIC_ON_BUG := 1
-	WLAN_WARN_ON_ASSERT := 1
-else ifeq ($(CONFIG_PERF_DEBUG), y)
-	PANIC_ON_BUG := 1
-	WLAN_WARN_ON_ASSERT := 1
-else
-	PANIC_ON_BUG := 0
-	WLAN_WARN_ON_ASSERT := 0
-endif
+PANIC_ON_BUG := 0
 
 #Enable OL debug and wmi unified functions
 CONFIG_ATH_PERF_PWR_OFFLOAD := 1
@@ -1148,10 +1153,6 @@ ifeq ($(CONFIG_MPC_UT_FRAMEWORK),y)
 WMA_OBJS +=	$(WMA_SRC_DIR)/wma_utils_ut.o
 endif
 
-ifeq ($(CONFIG_WLAN_FW_THERMAL_MITIGATION), y)
-WMA_OBJS += $(WMA_SRC_DIR)/wma_thermal.o
-endif
-
 ############## PLD ##########
 PLD_DIR := core/pld
 PLD_INC_DIR := $(PLD_DIR)/inc
@@ -1303,10 +1304,6 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWMI_CMD_STRINGS \
 		-DCONFIG_HDD_INIT_WITH_RTNL_LOCK \
 		-DMWS_COEX
-
-ifeq ($(CONFIG_WLAN_FEATURE_FIPS), y)
-CDEFINES += -DWLAN_FEATURE_FIPS
-endif
 
 ifneq ($(CONFIG_HIF_USB), 1)
 CDEFINES += -DWLAN_LOGGING_SOCK_SVC_ENABLE
@@ -1466,10 +1463,6 @@ ifeq ($(CONFIG_WLAN_BEACON_REPORTING),y)
 CDEFINES += -DNTH_BEACON_OFFLOAD
 endif
 
-ifeq ($(CONFIG_WLAN_FW_THERMAL_MITIGATION),y)
-CDEFINES += -DFW_THERMAL_THROTTLE_SUPPORT
-endif
-
 ifeq ($(BUILD_DIAG_VERSION),1)
 CDEFINES += -DFEATURE_WLAN_DIAG_SUPPORT
 CDEFINES += -DFEATURE_WLAN_DIAG_SUPPORT_CSR
@@ -1501,7 +1494,7 @@ ifeq ($(CONFIG_WLAN_FEATURE_LPSS),y)
 CDEFINES += -DWLAN_FEATURE_LPSS
 endif
 
-ifeq ($(CONFIG_QCA_CLD_DEBUG),y)
+ifneq ($(TARGET_BUILD_VARIANT),user)
 CDEFINES += -DDESC_DUP_DETECT_DEBUG
 CDEFINES += -DDEBUG_RX_RING_BUFFER
 endif
@@ -1959,6 +1952,9 @@ endif
 # To build without debug just ignore not used code.
 EXTRA_CFLAGS += $(call cc-disable-warning,unused-variable,)
 EXTRA_CFLAGS += $(call cc-disable-warning,unused-function,)
+
+EXTRA_CFLAGS += $(call cc-option, -g0)
+EXTRA_CFLAGS += $(call cc-option, -Os)
 
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
 # same a the QCA CHIP name. The host driver will then append MULTI_IF_NAME to

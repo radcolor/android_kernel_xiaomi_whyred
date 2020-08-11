@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -658,7 +658,6 @@ static int hdd_ipa_uc_enable_pipes(struct hdd_ipa_priv *hdd_ipa);
 static int hdd_ipa_wdi_init(struct hdd_ipa_priv *hdd_ipa);
 static void hdd_ipa_send_pkt_to_tl(struct hdd_ipa_iface_context *iface_context,
 		struct ipa_rx_data *ipa_tx_desc);
-static int hdd_ipa_setup_sys_pipe(struct hdd_ipa_priv *hdd_ipa);
 
 /**
  * hdd_ipa_uc_get_db_paddr() - Get Doorbell physical address
@@ -2576,7 +2575,7 @@ static int hdd_ipa_wdi_rm_try_release(struct hdd_ipa_priv *hdd_ipa)
 	 * while there is healthy amount of data transfer going on by
 	 * releasing the wake_lock after some delay.
 	 */
-	queue_delayed_work(system_power_efficient_wq, &hdd_ipa->wake_lock_work,
+	schedule_delayed_work(&hdd_ipa->wake_lock_work,
 			      msecs_to_jiffies
 				      (HDD_IPA_RX_INACTIVITY_MSEC_DELAY));
 
@@ -4061,19 +4060,6 @@ static void hdd_ipa_uc_loaded_handler(struct hdd_ipa_priv *ipa_ctxt)
 	if (!pdev) {
 		HDD_IPA_LOG(QDF_TRACE_LEVEL_FATAL, "invalid txrx context");
 		return;
-	}
-
-	/* Setup IPA sys_pipe for MCC */
-	if (hdd_ipa_uc_sta_is_enabled(ipa_ctxt->hdd_ctx)) {
-		ret = hdd_ipa_setup_sys_pipe(ipa_ctxt);
-		if (ret) {
-			HDD_IPA_LOG(QDF_TRACE_LEVEL_ERROR,
-				    "ipa sys pipes setup failed ret=%d", ret);
-			return;
-		}
-
-		INIT_WORK(&ipa_ctxt->mcc_work,
-				hdd_ipa_mcc_work_handler);
 	}
 
 	/* Connect pipe */
@@ -7517,6 +7503,14 @@ static QDF_STATUS __hdd_ipa_init(hdd_context_t *hdd_ctx)
 		hdd_ipa->sta_connected = 0;
 		hdd_ipa->ipa_pipes_down = true;
 		hdd_ipa->wdi_enabled = false;
+		/* Setup IPA sys_pipe for MCC */
+		if (hdd_ipa_uc_sta_is_enabled(hdd_ipa->hdd_ctx)) {
+			ret = hdd_ipa_setup_sys_pipe(hdd_ipa);
+			if (ret)
+				goto fail_create_sys_pipe;
+
+			INIT_WORK(&hdd_ipa->mcc_work, hdd_ipa_mcc_work_handler);
+		}
 
 		ret = hdd_ipa_wdi_init(hdd_ipa);
 		if (ret) {
@@ -7524,25 +7518,15 @@ static QDF_STATUS __hdd_ipa_init(hdd_context_t *hdd_ctx)
 					"ipa wdi init failed ret=%d", ret);
 			if (ret == -EACCES) {
 				if (hdd_ipa_uc_send_wdi_control_msg(false))
-					goto ipa_wdi_destroy;
+					goto fail_create_sys_pipe;
 			} else {
-				goto ipa_wdi_destroy;
-			}
-		} else {
-			/* Setup IPA sys_pipe for MCC */
-			if (hdd_ipa_uc_sta_is_enabled(hdd_ipa->hdd_ctx)) {
-				ret = hdd_ipa_setup_sys_pipe(hdd_ipa);
-				if (ret)
-					goto ipa_wdi_destroy;
-
-				INIT_WORK(&hdd_ipa->mcc_work,
-					  hdd_ipa_mcc_work_handler);
+				goto fail_create_sys_pipe;
 			}
 		}
 	} else {
 		ret = hdd_ipa_setup_sys_pipe(hdd_ipa);
 		if (ret)
-			goto ipa_wdi_destroy;
+			goto fail_create_sys_pipe;
 	}
 
 	init_completion(&hdd_ipa->ipa_resource_comp);
@@ -7550,7 +7534,7 @@ static QDF_STATUS __hdd_ipa_init(hdd_context_t *hdd_ctx)
 	HDD_IPA_LOG(QDF_TRACE_LEVEL_DEBUG, "exit: success");
 	return QDF_STATUS_SUCCESS;
 
-ipa_wdi_destroy:
+fail_create_sys_pipe:
 	hdd_ipa_wdi_destroy_rm(hdd_ipa);
 fail_setup_rm:
 	qdf_spinlock_destroy(&hdd_ipa->pm_lock);

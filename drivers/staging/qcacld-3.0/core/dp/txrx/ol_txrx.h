@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -211,46 +211,5 @@ struct ol_txrx_fw_stats_desc_t
 				     *pdev);
 struct ol_txrx_stats_req_internal *ol_txrx_fw_stats_desc_get_req(struct
 	ol_txrx_pdev_t *pdev, uint8_t desc_id);
-
-/**
- * enum pktcapture_tx_status - packet capture tx status
- * @pktcapture_tx_status_ok: successfully sent + acked
- * @pktcapture_tx_status_discard: discard - not sent
- * @pktcapture_tx_status_no_ack: no_ack - sent, but no ack
- *
- * This enum has tx status types for packet capture mode
- */
-enum pktcapture_tx_status {
-	pktcapture_tx_status_ok,
-	pktcapture_tx_status_discard,
-	pktcapture_tx_status_no_ack,
-};
-
-/*
- * struct ol_mon_tx_status - tx packets info
- * @status: tx status
- * @tx_retry_cnt: tx retry count
- *
- */
-
-struct ol_mon_tx_status {
-	uint8_t status;
-	uint8_t tx_retry_cnt;
-	uint16_t chan_num;
-};
-
-/**
- * struct radiotap_header - base radiotap header
- * @it_version: radiotap version, always 0
- * @it_pad: padding (or alignment)
- * @it_len: overall radiotap header length
- * @it_present: (first) present word
- */
-struct radiotap_header {
-	uint8_t it_version;
-	uint8_t it_pad;
-	__le16 it_len;
-	__le32 it_present;
-} __packed;
 
 #endif /* _OL_TXRX__H_ */
