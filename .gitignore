@@ -9,7 +9,7 @@
 #
 # Normal rules
 #
-.*
+.git
 *.o
 *.o.*
 *.a
