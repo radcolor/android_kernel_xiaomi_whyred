@@ -2,43 +2,49 @@ version: 2.1
 jobs:
   oldcam:
    docker:
-      - image: ubuntu:20.04
+      - image: archlinux:latest
    steps:
       - run:
           command: |
-           apt-get -y update && apt-get -y upgrade && DEBIAN_FRONTEND=noninteractive apt-get -y install bc build-essential curl libc6 libncurses5-dev bzip2 zip llvm libstdc++6 git wget libssl-dev zstd
+           pacman -Sy base-devel bc llvm curl wget git --noconfirm
            git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
            cd source
            git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
-           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/personal/ci
-           script -c "bash -x lazyscripts/personal/ci --oldcam" build.log
+           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
+           script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam" build.log
   newcam:
    docker:
-      - image: ubuntu:20.04
+      - image: archlinux:latest
    steps:
       - run:
           command: |
-           apt-get -y update && apt-get -y upgrade && DEBIAN_FRONTEND=noninteractive apt-get -y install bc build-essential curl libc6 libncurses5-dev bzip2 zip llvm libstdc++6 git wget libssl-dev zstd
+           pacman -Sy base-devel bc llvm curl wget git --noconfirm
            git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
            cd source
            git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
-           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/personal/ci
-           script -c "bash -x lazyscripts/personal/ci --newcam" build.log
+           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
+           script -c "bash -x lazyscripts/ci-scripts/ci-rad --newcam" build.log
   fakejob:
    docker:
-      - image: ubuntu:20.04
+      - image: archlinux:latest
    steps:
       - run:
           command: |
-           apt-get -y update && apt-get -y upgrade && DEBIAN_FRONTEND=noninteractive apt-get -y install bc build-essential curl libc6 libncurses5-dev bzip2 zip llvm libstdc++6 git wget libssl-dev zstd
+           pacman -Sy base-devel bc llvm curl wget git --noconfirm
            git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
            cd source
            git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
-           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/personal/ci-fake
-           script -c "bash -x lazyscripts/personal/ci-fake" build.log
+           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-fake
+           script -c "bash -x lazyscripts/ci-scripts/ci-fakr" build.log
+  nulljob:
+   docker:
+      - image: archlinux:latest
+   steps:
+      - run:
+          command: |
+           echo "Null job!"
 workflows:
   version: 2.1
   BOB the builder:
     jobs:
-      - oldcam
-      - newcam
+      - nulljob
