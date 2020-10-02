@@ -6,36 +6,36 @@ jobs:
    steps:
       - run:
           command: |
-           pacman -Sy base-devel bc llvm curl wget git --noconfirm
+           pacman -Sy base-devel bc llvm curl zip wget git --noconfirm
            git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
            cd source
            git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
-           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
-           script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam" build.log
+           sed -i "s/BOT_TOKEN=.*/BOT_TOKEN=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
+           script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --gcc" build.log
   newcam:
    docker:
       - image: archlinux:latest
    steps:
       - run:
           command: |
-           pacman -Sy base-devel bc llvm curl wget git --noconfirm
+           pacman -Sy base-devel bc llvm curl zip wget git --noconfirm
            git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
            cd source
            git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
-           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
-           script -c "bash -x lazyscripts/ci-scripts/ci-rad --newcam" build.log
+           sed -i "s/BOT_TOKEN=.*/BOT_TOKEN=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
+           script -c "bash -x lazyscripts/ci-scripts/ci-rad --newcam --gcc" build.log
   fakejob:
    docker:
       - image: archlinux:latest
    steps:
       - run:
           command: |
-           pacman -Sy base-devel bc llvm curl wget git --noconfirm
+           pacman -Sy base-devel bc llvm curl zip wget git --noconfirm
            git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source
            cd source
            git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
-           sed -i "s/token=.*/token=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-fake
-           script -c "bash -x lazyscripts/ci-scripts/ci-fakr" build.log
+           sed -i "s/BOT_TOKEN=.*/BOT_TOKEN=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-fake
+           script -c "bash -x lazyscripts/ci-scripts/ci-fake --gcc" build.log
   nulljob:
    docker:
       - image: archlinux:latest
