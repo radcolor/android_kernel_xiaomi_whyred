@@ -13,11 +13,10 @@ steps:
   commands:
     - "export TG_BOT_API"
     - pacman -Sy base-devel bc llvm curl zip wget git --noconfirm
-    - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source
-    - cd source
+    - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
     - sed -i "s/BOT_TOKEN=.*/BOT_TOKEN=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
-    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --aosp-clang" build.log
+    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --aosp-clang" build.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
 
 ---
 kind: pipeline
@@ -35,8 +34,7 @@ steps:
   commands:
     - "export TG_BOT_API"
     - pacman -Sy base-devel bc llvm curl zip wget git --noconfirm
-    - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source
-    - cd source
+    - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
     - sed -i "s/BOT_TOKEN=.*/BOT_TOKEN=$TG_BOT_API/g" lazyscripts/ci-scripts/ci-rad
-    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --newcam --aosp-clang" build.log
+    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --newcam --aosp-clang" build.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
