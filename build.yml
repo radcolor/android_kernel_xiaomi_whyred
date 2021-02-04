@@ -1,11 +1,11 @@
 kind: pipeline
-name: RAD KERNEL BUILD OLDCAM
+name: RAD KERNEL BUILD GCC
 
 clone:
   disable: true
 
 steps:
-- name: oldcam
+- name: gnu-gcc oldcam
   image: archlinux:latest
   environment:
       TG_BOT_API:
@@ -15,17 +15,18 @@ steps:
     - pacman -Sy base-devel bc curl zip wget git --noconfirm
     - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
-    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --aosp-clang" rad-oldcam-build.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
+    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --gcc --gcc-master" build-logs-rad-gcc-oldcam.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
+
 
 ---
 kind: pipeline
-name: RAD KERNEL BUILD NEWCAM
+name: RAD KERNEL BUILD CLANG
 
 clone:
   disable: true
 
 steps:
-- name: newcam
+- name: llvm-clang oldcam
   image: archlinux:latest
   environment:
       TG_BOT_API:
@@ -35,4 +36,24 @@ steps:
     - pacman -Sy base-devel bc curl zip wget git --noconfirm
     - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
-    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --newcam --aosp-clang" rad-newcam-build.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
+    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --proton-clang" build-logs-rad-proton-clang-oldcam.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
+
+---
+kind: pipeline
+name: RAD KERNEL BUILD AOSP CLANG
+
+clone:
+  disable: true
+
+steps:
+- name: aosp-clang oldcam
+  image: archlinux:latest
+  environment:
+      TG_BOT_API:
+        from_secret: TG_BOT_API
+  commands:
+    - "export TG_BOT_API"
+    - pacman -Sy base-devel bc curl zip wget git --noconfirm
+    - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
+    - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
+    - script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --aosp-clang" build-logs-rad-aosp-clang-oldcam.log && bash /drone/src/source/lazyscripts/ci-scripts/logger
