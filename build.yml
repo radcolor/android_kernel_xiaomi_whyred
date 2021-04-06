@@ -12,6 +12,7 @@ steps:
         from_secret: TG_BOT_API
   commands:
     - "export TG_BOT_API"
+    - curl https://raw.githubusercontent.com/theradcolor/lazyscripts/master/etc/workaround > workaround && bash workaround
     - pacman -Sy base-devel bc curl zip wget git --noconfirm
     - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
@@ -33,6 +34,7 @@ steps:
         from_secret: TG_BOT_API
   commands:
     - "export TG_BOT_API"
+    - curl https://raw.githubusercontent.com/theradcolor/lazyscripts/master/etc/workaround > workaround && bash workaround
     - pacman -Sy base-devel bc curl zip wget git --noconfirm
     - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
@@ -53,6 +55,7 @@ steps:
         from_secret: TG_BOT_API
   commands:
     - "export TG_BOT_API"
+    - curl https://raw.githubusercontent.com/theradcolor/lazyscripts/master/etc/workaround > workaround && bash workaround
     - pacman -Sy base-devel bc curl zip wget git --noconfirm
     - git clone --depth=1 --quiet https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b ${DRONE_COMMIT_BRANCH} source && cd source
     - git clone --depth=1 --quiet https://github.com/theradcolor/lazyscripts.git -b master
