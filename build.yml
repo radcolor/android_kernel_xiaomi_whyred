@@ -8,6 +8,8 @@ steps:
 - name: gnu-gcc oldcam
   image: archlinux:latest
   environment:
+      PUBLIC_PUSH:
+        from_secret: PUBLIC_PUSH
       TG_BOT_API:
         from_secret: TG_BOT_API
   commands:
@@ -29,6 +31,8 @@ steps:
 - name: llvm-clang oldcam
   image: archlinux:latest
   environment:
+      PUBLIC_PUSH:
+        from_secret: PUBLIC_PUSH
       TG_BOT_API:
         from_secret: TG_BOT_API
   commands:
@@ -49,6 +53,8 @@ steps:
 - name: aosp-clang oldcam
   image: archlinux:latest
   environment:
+      PUBLIC_PUSH:
+        from_secret: PUBLIC_PUSH
       TG_BOT_API:
         from_secret: TG_BOT_API
   commands:
@@ -72,8 +78,6 @@ steps:
       KERNEL_TYPE: fakerad
       TG_BOT_API:
         from_secret: TG_BOT_API
-      TRISHNA_API:
-        from_secret: TRISHNA_API
   commands:
     - curl https://raw.githubusercontent.com/theradcolor/lazyscripts/master/etc/workaround > workaround && bash workaround
     - pacman -Sy base-devel bc curl git jre-openjdk zip --noconfirm
