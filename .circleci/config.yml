@@ -1,0 +1,17 @@
+version: 2.1
+jobs:
+  oldcam:
+   docker:
+      - image: archlinux:latest
+   steps:
+      - run:
+          command: |
+           pacman -Sy base-devel bc curl git jre-openjdk zip --noconfirm
+           git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git -b $CIRCLE_BRANCH source && cd source
+           git clone --depth=1 https://github.com/theradcolor/lazyscripts.git -b master
+           script -c "bash -x lazyscripts/ci-scripts/ci-rad --oldcam --gcc --gcc-master" build-logs-rad-gcc-oldcam.log && bash lazyscripts/ci-scripts/logger --rk-logs
+workflows:
+  version: 2.1
+  BOB the builder:
+    jobs:
+      - oldcam
